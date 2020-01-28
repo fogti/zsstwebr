@@ -51,8 +51,8 @@ fn main() {
 
     base::tr_folder2(indir, &outdir, |fpath, rd: base::Post, mut wr| {
         println!("- {}", fpath);
-        let lnk = match &rd.data {
-            base::PostData::Link(ref l) => l,
+        let (lnk, ret): (&str, bool) = match &rd.data {
+            base::PostData::Link(ref l) => (&l, false),
             base::PostData::Text(ref t) => {
                 writeln!(
                     &mut wr,
@@ -79,7 +79,7 @@ base::back_to_idx(fpath), &config.x_nav,
                     writeln!(&mut wr, "    {}", i).unwrap();
                 }
                 writeln!(&mut wr, "  </body>\n</html>").unwrap();
-                fpath
+                (fpath, true)
             }
         };
         ents.push(format!(
@@ -88,6 +88,7 @@ base::back_to_idx(fpath), &config.x_nav,
             lnk,
             &rd.title
         ));
+        ret
     });
 
     let mut f = std::io::BufWriter::new(

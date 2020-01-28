@@ -27,6 +27,7 @@ pub struct Post {
     pub x_head: String,
 }
 
+#[inline]
 fn ghandle_res2ok<T, E>(nam: &'static str) -> impl Fn(Result<T, E>) -> Option<T>
 where
     E: std::error::Error,
@@ -43,7 +44,7 @@ where
 pub fn tr_folder2<P, F, T>(inp: P, outp: P, mut f: F)
 where
     P: AsRef<std::path::Path>,
-    F: FnMut(&str, T, std::io::BufWriter<File>),
+    F: FnMut(&str, T, std::io::BufWriter<File>) -> bool,
     T: for<'de> serde::de::Deserialize<'de>,
 {
     let mut crds = HashSet::new();
@@ -72,12 +73,16 @@ where
                 crds.insert(x.to_path_buf());
             }
         }
+        let stin = stin.to_str().expect("got invalid file name");
+        print!("- {} ", stin);
         let fhout = std::fs::File::create(&outfilp).expect("unable to create output file");
-        f(
-            stin.to_str().expect("got invalid file name"),
+        if !f(
+            stin,
             serde_yaml::from_slice(&*fh_data).expect("unable to decode file as YAML"),
             std::io::BufWriter::new(fhout),
-        );
+        ) {
+            std::fs::remove_file(&outfilp).expect("unable to remove output file");
+        }
     }
 }
 
