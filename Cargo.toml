@@ -1,0 +1,13 @@
+[package]
+name = "zsstwebr"
+version = "0.0.0"
+authors = ["Erik Zscheile <erik.zscheile@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.33"
+chrono = { version = "0.4", features = ["serde"] }
+glob = "0.3"
+readfilez = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"
