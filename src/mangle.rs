@@ -14,15 +14,16 @@ fn check_for_mangle_skip(dont_mangle: &[&str], mut input: &str) -> bool {
     false
 }
 
-pub fn mangle_content<'a>(dont_mangle: &[&str], input: &'a str) -> Vec<&'a str> {
+pub fn mangle_content(dont_mangle: &[&str], input: &str) -> String {
     input
         .split("\n\n")
         .flat_map(|section| {
             if check_for_mangle_skip(dont_mangle, section) {
-                vec![section, "<br />"]
+                vec![section]
             } else {
                 vec!["<p>", section, "</p>"]
             }
         })
         .collect::<Vec<_>>()
+        .join("\n")
 }

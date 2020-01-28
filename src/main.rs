@@ -32,7 +32,7 @@ fn main() {
         )
         .get_matches();
 
-    let dont_mangle = vec!["dl>", "ul>", "ol>", "pre>"];
+    let dont_mangle = vec!["code>", "dl>", "h2>", "h3>", "ul>", "ol>", "pre>"];
 
     let indir = matches.value_of("INPUT_DIR").unwrap();
     let outdir = matches.value_of("output_dir").unwrap();
@@ -46,6 +46,56 @@ fn main() {
                 .expect("unable to read config file");
         serde_yaml::from_slice(&*fh_data).expect("unable to decode file as YAML")
     };
+
+    let mut ents = Vec::new();
+
+    base::tr_folder2(indir, &outdir, |fpath, rd: base::Post, mut wr| {
+        println!("- {}", fpath);
+        match &rd.data {
+            base::PostData::Link(ref l) => {
+                ents.push(format!(
+                    "{}: <a href=\"{}\">{}</a><br />",
+                    rd.cdate.format("%d.%m.%Y"),
+                    l,
+                    &rd.title
+                ));
+            }
+            base::PostData::Text(ref t) => {
+                ents.push(format!(
+                    "{}: <a href=\"{}\">{}</a><br />",
+                    rd.cdate.format("%d.%m.%Y"),
+                    fpath,
+                    &rd.title
+                ));
+                writeln!(
+                    &mut wr,
+                    "<!doctype html>\n<html lang=\"de\" dir=\"ltr\">\n  <head>"
+                ).unwrap();
+                writeln!(&mut wr, "    <meta charset=\"utf-8\" />").unwrap();
+                writeln!(&mut wr, "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />").unwrap();
+                writeln!(
+                    &mut wr,
+                    "    <link rel=\"stylesheet\" href=\"{}\" type=\"text/css\" />",
+                    &config.stylesheet
+                ).unwrap();
+                writeln!(
+                    &mut wr,
+                    "    <title>{} &mdash; {}</title>",
+                    &rd.title, &config.blog_name
+                ).unwrap();
+                write!(&mut wr, "{}{}", &config.x_head, &rd.x_head).unwrap();
+                writeln!(&mut wr, "  </head>\n  <body>").unwrap();
+                writeln!(&mut wr, "    <h1>{}</h1>", &rd.title).unwrap();
+                write!(&mut wr, "{}", &config.x_body_ph1).unwrap();
+                writeln!(&mut wr, "    <a href=\"#\" onclick=\"window.history.back()\">Zur&uuml;ck zur vorherigen Seite</a> - <a href=\"{}\">Zur&uuml;ck zur Hauptseite</a>{}<br />", base::back_to_idx(fpath), &config.x_nav).unwrap();
+                writeln!(&mut wr).unwrap();
+                for i in mangle::mangle_content(&dont_mangle, t).lines() {
+                    writeln!(&mut wr, "    {}", i).unwrap();
+                }
+                writeln!(&mut wr, "  </body>\n</html>").unwrap();
+            }
+        }
+    });
 
     let mut f = std::io::BufWriter::new(
         std::fs::File::create(std::path::Path::new(outdir).join("index.html"))
@@ -71,57 +121,11 @@ fn main() {
     writeln!(&mut f, "  </head>\n  <body>").unwrap();
     writeln!(&mut f, "    <h1>{}</h1>", &config.blog_name).unwrap();
     write!(&mut f, "{}", &config.x_body_ph1).unwrap();
-    writeln!(&mut f, "<pre>").unwrap();
+    writeln!(&mut f, "<tt>").unwrap();
 
-    base::tr_folder2(indir, &outdir, |fpath, rd: base::Post, mut wr| {
-        println!("- {}", fpath);
-        match &rd.data {
-            base::PostData::Link(ref l) => {
-                writeln!(
-                    &mut f,
-                    "{}: <a href=\"{}\">{}</a><br />",
-                    rd.cdate.format("%d.%m.%Y"),
-                    l,
-                    &rd.title
-                ).unwrap();
-            }
-            base::PostData::Text(ref t) => {
-                writeln!(
-                    &mut f,
-                    "{}: <a href=\"{}\">{}</a><br />",
-                    rd.cdate.format("%d.%m.%Y"),
-                    fpath,
-                    &rd.title
-                ).unwrap();
-                writeln!(
-                    &mut wr,
-                    "<!doctype html>\n<html lang=\"de\" dir=\"ltr\">\n  <head>"
-                ).unwrap();
-                writeln!(&mut wr, "    <meta charset=\"utf-8\" />").unwrap();
-                writeln!(&mut wr, "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />").unwrap();
-                writeln!(
-                    &mut wr,
-                    "    <link rel=\"stylesheet\" href=\"{}\" type=\"text/css\" />",
-                    &config.stylesheet
-                ).unwrap();
-                writeln!(
-                    &mut wr,
-                    "    <title>{} &mdash; {}</title>",
-                    &rd.title, &config.blog_name
-                ).unwrap();
-                write!(&mut wr, "{}{}", &config.x_head, &rd.x_head).unwrap();
-                writeln!(&mut wr, "  </head>\n  <body>").unwrap();
-                writeln!(&mut wr, "    <h1>{}</h1>", &rd.title).unwrap();
-                write!(&mut wr, "{}", &config.x_body_ph1).unwrap();
-                writeln!(&mut wr, "    <a href=\"#\" onclick=\"window.history.back()\">Zur&uuml;ck zur vorherigen Seite</a> - <a href=\"{}\">Zur&uuml;ck zur Hauptseite</a>{}<br />", base::back_to_idx(fpath), &config.x_nav).unwrap();
-                writeln!(&mut wr).unwrap();
-                for i in mangle::mangle_content(&dont_mangle, t) {
-                    writeln!(&mut wr, "    {}", i).unwrap();
-                }
-                writeln!(&mut wr, "  </body>\n</html>").unwrap();
-            }
-        }
-    });
+    for i in ents.iter().rev() {
+        writeln!(&mut f, "{}", i).unwrap();
+    }
 
-    writeln!(&mut f, "</pre>\n  </body>\n</html>").unwrap();
+    writeln!(&mut f, "</tt>\n  </body>\n</html>").unwrap();
 }
