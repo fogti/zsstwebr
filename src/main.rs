@@ -95,7 +95,7 @@ base::back_to_idx(fpath), &config.x_nav,
             .expect("unable to open index file"),
     );
 
-    writeln!(
+    write!(
         &mut f,
         r#"<!doctype html>
 <html lang="de" dir="ltr">
@@ -107,7 +107,8 @@ base::back_to_idx(fpath), &config.x_nav,
 {}  </head>
   <body>
     <h1>{}</h1>
-{}<tt>
+{}
+<tt>
 "#,
         &config.stylesheet,
         &config.blog_name,
