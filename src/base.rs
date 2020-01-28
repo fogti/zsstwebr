@@ -74,7 +74,7 @@ where
             }
         }
         let stin = stin.to_str().expect("got invalid file name");
-        print!("- {} ", stin);
+        println!("- {} ", stin);
         let fhout = std::fs::File::create(&outfilp).expect("unable to create output file");
         if !f(
             stin,

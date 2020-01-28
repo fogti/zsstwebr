@@ -50,7 +50,6 @@ fn main() {
     let mut ents = Vec::new();
 
     base::tr_folder2(indir, &outdir, |fpath, rd: base::Post, mut wr| {
-        println!("- {}", fpath);
         let (lnk, ret): (&str, bool) = match &rd.data {
             base::PostData::Link(ref l) => (&l, false),
             base::PostData::Text(ref t) => {
