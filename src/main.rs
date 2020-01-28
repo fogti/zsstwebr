@@ -51,38 +51,28 @@ fn main() {
 
     base::tr_folder2(indir, &outdir, |fpath, rd: base::Post, mut wr| {
         println!("- {}", fpath);
-        match &rd.data {
-            base::PostData::Link(ref l) => {
-                ents.push(format!(
-                    "{}: <a href=\"{}\">{}</a><br />",
-                    rd.cdate.format("%d.%m.%Y"),
-                    l,
-                    &rd.title
-                ));
-            }
+        let lnk = match &rd.data {
+            base::PostData::Link(ref l) => l,
             base::PostData::Text(ref t) => {
-                ents.push(format!(
-                    "{}: <a href=\"{}\">{}</a><br />",
-                    rd.cdate.format("%d.%m.%Y"),
-                    fpath,
-                    &rd.title
-                ));
                 writeln!(
                     &mut wr,
                     "<!doctype html>\n<html lang=\"de\" dir=\"ltr\">\n  <head>"
-                ).unwrap();
+                )
+                .unwrap();
                 writeln!(&mut wr, "    <meta charset=\"utf-8\" />").unwrap();
                 writeln!(&mut wr, "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />").unwrap();
                 writeln!(
                     &mut wr,
                     "    <link rel=\"stylesheet\" href=\"{}\" type=\"text/css\" />",
                     &config.stylesheet
-                ).unwrap();
+                )
+                .unwrap();
                 writeln!(
                     &mut wr,
                     "    <title>{} &mdash; {}</title>",
                     &rd.title, &config.blog_name
-                ).unwrap();
+                )
+                .unwrap();
                 write!(&mut wr, "{}{}", &config.x_head, &rd.x_head).unwrap();
                 writeln!(&mut wr, "  </head>\n  <body>").unwrap();
                 writeln!(&mut wr, "    <h1>{}</h1>", &rd.title).unwrap();
@@ -93,8 +83,15 @@ fn main() {
                     writeln!(&mut wr, "    {}", i).unwrap();
                 }
                 writeln!(&mut wr, "  </body>\n</html>").unwrap();
+                fpath
             }
-        }
+        };
+        ents.push(format!(
+            "{}: <a href=\"{}\">{}</a><br />",
+            rd.cdate.format("%d.%m.%Y"),
+            lnk,
+            &rd.title
+        ));
     });
 
     let mut f = std::io::BufWriter::new(
@@ -105,17 +102,20 @@ fn main() {
     writeln!(
         &mut f,
         "<!doctype html>\n<html lang=\"de\" dir=\"ltr\">\n  <head>"
-    ).unwrap();
+    )
+    .unwrap();
     writeln!(&mut f, "    <meta charset=\"utf-8\" />").unwrap();
     writeln!(
         &mut f,
         "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />"
-    ).unwrap();
+    )
+    .unwrap();
     writeln!(
         &mut f,
         "    <link rel=\"stylesheet\" href=\"{}\" type=\"text/css\" />",
         &config.stylesheet
-    ).unwrap();
+    )
+    .unwrap();
     writeln!(&mut f, "    <title>{}</title>", &config.blog_name).unwrap();
     write!(&mut f, "{}", &config.x_head).unwrap();
     writeln!(&mut f, "  </head>\n  <body>").unwrap();
