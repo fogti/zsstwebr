@@ -56,29 +56,25 @@ fn main() {
             base::PostData::Text(ref t) => {
                 writeln!(
                     &mut wr,
-                    "<!doctype html>\n<html lang=\"de\" dir=\"ltr\">\n  <head>"
-                )
-                .unwrap();
-                writeln!(&mut wr, "    <meta charset=\"utf-8\" />").unwrap();
-                writeln!(&mut wr, "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />").unwrap();
-                writeln!(
-                    &mut wr,
-                    "    <link rel=\"stylesheet\" href=\"{}\" type=\"text/css\" />",
-                    &config.stylesheet
-                )
-                .unwrap();
-                writeln!(
-                    &mut wr,
-                    "    <title>{} &mdash; {}</title>",
-                    &rd.title, &config.blog_name
-                )
-                .unwrap();
-                write!(&mut wr, "{}{}", &config.x_head, &rd.x_head).unwrap();
-                writeln!(&mut wr, "  </head>\n  <body>").unwrap();
-                writeln!(&mut wr, "    <h1>{}</h1>", &rd.title).unwrap();
-                write!(&mut wr, "{}", &config.x_body_ph1).unwrap();
-                writeln!(&mut wr, "    <a href=\"#\" onclick=\"window.history.back()\">Zur&uuml;ck zur vorherigen Seite</a> - <a href=\"{}\">Zur&uuml;ck zur Hauptseite</a>{}<br />", base::back_to_idx(fpath), &config.x_nav).unwrap();
-                writeln!(&mut wr).unwrap();
+                    r##"<!doctype html>
+<html lang="de" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{}" type="text/css" />
+    <title>{} &mdash; {}</title>
+{}{}  </head>
+  <body>
+    <h1>{}</h1>
+{}    <a href="#" onclick="window.history.back()">Zur&uuml;ck zur vorherigen Seite</a> - <a href="{}">Zur&uuml;ck zur Hauptseite</a>{}<br />
+"##,
+    &config.stylesheet,
+    &rd.title, &config.blog_name,
+&config.x_head, &rd.x_head,
+&rd.title,
+&config.x_body_ph1,
+base::back_to_idx(fpath), &config.x_nav,
+).unwrap();
                 for i in mangle::mangle_content(&dont_mangle, t).lines() {
                     writeln!(&mut wr, "    {}", i).unwrap();
                 }
@@ -101,28 +97,25 @@ fn main() {
 
     writeln!(
         &mut f,
-        "<!doctype html>\n<html lang=\"de\" dir=\"ltr\">\n  <head>"
+        r#"<!doctype html>
+<html lang="de" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{}" type="text/css" />
+    <title>{}</title>
+{}  </head>
+  <body>
+    <h1>{}</h1>
+{}<tt>
+"#,
+        &config.stylesheet,
+        &config.blog_name,
+        &config.x_head,
+        &config.blog_name,
+        &config.x_body_ph1,
     )
     .unwrap();
-    writeln!(&mut f, "    <meta charset=\"utf-8\" />").unwrap();
-    writeln!(
-        &mut f,
-        "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />"
-    )
-    .unwrap();
-    writeln!(
-        &mut f,
-        "    <link rel=\"stylesheet\" href=\"{}\" type=\"text/css\" />",
-        &config.stylesheet
-    )
-    .unwrap();
-    writeln!(&mut f, "    <title>{}</title>", &config.blog_name).unwrap();
-    write!(&mut f, "{}", &config.x_head).unwrap();
-    writeln!(&mut f, "  </head>\n  <body>").unwrap();
-    writeln!(&mut f, "    <h1>{}</h1>", &config.blog_name).unwrap();
-    write!(&mut f, "{}", &config.x_body_ph1).unwrap();
-    writeln!(&mut f, "<tt>").unwrap();
-
     for i in ents.iter().rev() {
         writeln!(&mut f, "{}", i).unwrap();
     }
