@@ -32,7 +32,17 @@ fn main() {
         )
         .get_matches();
 
-    let dont_mangle = vec!["code>", "dl>", "h2>", "h3>", "ul>", "ol>", "pre>"];
+    let dont_mangle = vec![
+        "blockquote",
+        "code",
+        "dl",
+        "h2",
+        "h3",
+        "ul",
+        "ol",
+        "pre",
+        "tt",
+    ];
 
     let indir = matches.value_of("INPUT_DIR").unwrap();
     let outdir = matches.value_of("output_dir").unwrap();

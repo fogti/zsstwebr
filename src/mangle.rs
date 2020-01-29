@@ -7,7 +7,10 @@ fn check_for_mangle_skip(dont_mangle: &[&str], mut input: &str) -> bool {
             // see assert_eq on top of main@../build.rs
             input = &input[1..];
         }
-        if dont_mangle.iter().any(|i| input.starts_with(*i)) {
+        if dont_mangle
+            .iter()
+            .any(|i| input.starts_with(*i) && input[i.len()..].starts_with('>'))
+        {
             return true;
         }
     }
