@@ -7,7 +7,10 @@ pub struct Mangler {
 
 impl Mangler {
     pub fn new(dont_mangle: Vec<&str>) -> Mangler {
-        let pats: Vec<_> = dont_mangle.into_iter().flat_map(|i| vec!["<".to_string() + i + ">", "</".to_string() + i + ">"]).collect();
+        let pats: Vec<_> = dont_mangle
+            .into_iter()
+            .flat_map(|i| vec!["<".to_string() + i + ">", "</".to_string() + i + ">"])
+            .collect();
         Mangler {
             ahos: AhoCorasick::new_auto_configured(&pats),
         }

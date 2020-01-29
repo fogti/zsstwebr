@@ -1,9 +1,10 @@
 mod base;
 mod mangle;
 
+use std::{fs::File, io::Write, path::Path};
+
 fn main() {
     use clap::Arg;
-    use std::{fs::File, io::Write};
 
     let matches = clap::App::new("zsstwebr")
         .version(clap::crate_version!())
@@ -59,6 +60,8 @@ fn main() {
 
     let mut ents = Vec::new();
 
+    let mut subents = std::collections::HashMap::new();
+
     base::tr_folder2(indir, &outdir, |fpath, rd: base::Post, mut wr| {
         let (lnk, ret): (&str, bool) = match &rd.data {
             base::PostData::Link(ref l) => (&l, false),
@@ -91,19 +94,94 @@ base::back_to_idx(fpath), &config.x_nav,
                 (fpath, true)
             }
         };
+        let cdatef = rd.cdate.format("%d.%m.%Y");
         ents.push(format!(
-            "{}: <a href=\"{}\">{}</a><br />",
-            rd.cdate.format("%d.%m.%Y"),
-            lnk,
-            &rd.title
+            "{}: <a href=\"{}\">{}</a>",
+            &cdatef, lnk, &rd.title
         ));
+        {
+            let fpap = std::path::Path::new(fpath);
+            if let Some(x) = fpap.parent() {
+                let bname = fpap.file_name().unwrap();
+                subents
+                    .entry(x.to_path_buf())
+                    .or_insert_with(Vec::new)
+                    .push(format!(
+                        "{}: <a href=\"{}\">{}</a>",
+                        &cdatef,
+                        if lnk == fpath {
+                            bname.to_str().unwrap()
+                        } else {
+                            lnk
+                        },
+                        &rd.title
+                    ));
+            }
+        }
         ret
     });
 
-    let mut f = std::io::BufWriter::new(
-        std::fs::File::create(std::path::Path::new(outdir).join("index.html"))
-            .expect("unable to open index file"),
-    );
+    let mut kv: Vec<std::path::PathBuf> = subents
+        .keys()
+        .flat_map(|i| i.ancestors())
+        .map(Path::to_path_buf)
+        .collect();
+    kv.sort();
+    kv.dedup();
+
+    let null_path = std::path::Path::new("");
+    for i in kv {
+        if &i == null_path {
+            continue;
+        }
+        let ibn = i.file_name().unwrap().to_str().unwrap();
+        match i.parent() {
+            None => &mut ents,
+            Some(par) if par == null_path => &mut ents,
+            Some(par) => subents.entry(par.to_path_buf()).or_insert_with(Vec::new),
+        }
+        .push(format!("<a href=\"{}/index.html\">{}</a>", ibn, ibn));
+    }
+
+    write_index(&config, outdir, "", &ents).expect("unable to write main-index");
+
+    for (subdir, p_ents) in subents.iter() {
+        write_index(&config, outdir, subdir, &p_ents).expect("unable to write sub-index");
+    }
+}
+
+fn write_index<P1, P2>(
+    config: &base::Config,
+    outdir: P1,
+    idx_name: P2,
+    ents: &[String],
+) -> std::io::Result<()>
+where
+    P1: AsRef<Path>,
+    P2: AsRef<Path>,
+{
+    write_index_inner(config, outdir.as_ref(), idx_name.as_ref(), ents)
+}
+
+fn write_index_inner(
+    config: &base::Config,
+    outdir: &Path,
+    idx_name: &Path,
+    ents: &[String],
+) -> std::io::Result<()> {
+    println!("- index: {}", idx_name.display());
+
+    let mut f = std::io::BufWriter::new(std::fs::File::create(
+        std::path::Path::new(outdir)
+            .join(idx_name)
+            .join("index.html"),
+    )?);
+
+    let (it_pre, it_post) = if idx_name.to_str().map(|i| i.is_empty()) == Some(true) {
+        ("", "")
+    } else {
+        ("Ordner: ", " &mdash; ")
+    };
 
     write!(
         &mut f,
@@ -113,7 +191,7 @@ base::back_to_idx(fpath), &config.x_nav,
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="{}" type="text/css" />
-    <title>{}</title>
+    <title>{}{}{}{}</title>
 {}  </head>
   <body>
     <h1>{}</h1>
@@ -123,13 +201,19 @@ base::back_to_idx(fpath), &config.x_nav,
         &config.stylesheet,
         &config.blog_name,
         &config.x_head,
+        it_pre,
+        idx_name.to_str().unwrap(),
+        it_post,
         &config.blog_name,
         &config.x_body_ph1,
-    )
-    .unwrap();
+    )?;
+
     for i in ents.iter().rev() {
-        writeln!(&mut f, "{}", i).unwrap();
+        writeln!(&mut f, "{}<br />", i)?;
     }
 
-    writeln!(&mut f, "</tt>\n  </body>\n</html>").unwrap();
+    writeln!(&mut f, "</tt>\n  </body>\n</html>")?;
+
+    f.flush()?;
+    Ok(())
 }
