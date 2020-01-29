@@ -194,11 +194,14 @@ fn write_index_inner(
     <title>{}{}{}{}</title>
 {}  </head>
   <body>
-    <h1>{}</h1>
+    <h1>{}{}{}{}</h1>
 {}
 <tt>
 "#,
         &config.stylesheet,
+        it_pre,
+        idx_name.to_str().unwrap(),
+        it_post,
         &config.blog_name,
         &config.x_head,
         it_pre,
