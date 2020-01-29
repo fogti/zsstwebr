@@ -34,15 +34,33 @@ fn main() {
         .get_matches();
 
     let mangler = mangle::Mangler::new(vec![
+        "address",
+        "article",
+        "aside",
         "blockquote",
         "code",
+        "div",
         "dl",
+        "fieldset",
+        "footer",
+        "form",
+        "h1",
         "h2",
         "h3",
-        "ul",
+        "h4",
+        "h5",
+        "h6",
+        "header",
+        "hr",
+        "menu",
+        "nav",
         "ol",
+        "p",
         "pre",
+        "section",
+        "table",
         "tt",
+        "ul",
     ]);
 
     let indir = matches.value_of("INPUT_DIR").unwrap();
@@ -131,7 +149,7 @@ base::back_to_idx(fpath), &config.x_nav,
 
     let null_path = std::path::Path::new("");
     for i in kv {
-        if &i == null_path {
+        if i == null_path {
             continue;
         }
         let ibn = i.file_name().unwrap().to_str().unwrap();
