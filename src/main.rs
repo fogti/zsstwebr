@@ -74,7 +74,7 @@ fn main() {
 &config.x_body_ph1,
 base::back_to_idx(fpath), &config.x_nav,
 ).unwrap();
-                for i in mangle::mangle_content(&dont_mangle, t).lines() {
+                for i in mangle::mangle_content(&dont_mangle, t) {
                     writeln!(&mut wr, "    {}", i).unwrap();
                 }
                 writeln!(&mut wr, "  </body>\n</html>").unwrap();
