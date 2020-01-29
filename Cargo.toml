@@ -5,6 +5,7 @@ authors = ["Erik Zscheile <erik.zscheile@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+aho-corasick = "0.7"
 clap = "2.33"
 chrono = { version = "0.4", features = ["serde"] }
 glob = "0.3"

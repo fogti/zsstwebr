@@ -32,7 +32,7 @@ fn main() {
         )
         .get_matches();
 
-    let dont_mangle = vec![
+    let mangler = mangle::Mangler::new(vec![
         "blockquote",
         "code",
         "dl",
@@ -42,7 +42,7 @@ fn main() {
         "ol",
         "pre",
         "tt",
-    ];
+    ]);
 
     let indir = matches.value_of("INPUT_DIR").unwrap();
     let outdir = matches.value_of("output_dir").unwrap();
@@ -84,7 +84,7 @@ fn main() {
 &config.x_body_ph1,
 base::back_to_idx(fpath), &config.x_nav,
 ).unwrap();
-                for i in mangle::mangle_content(&dont_mangle, t) {
+                for i in mangler.mangle_content(t) {
                     writeln!(&mut wr, "    {}", i).unwrap();
                 }
                 writeln!(&mut wr, "  </body>\n</html>").unwrap();
