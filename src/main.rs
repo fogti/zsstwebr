@@ -195,7 +195,9 @@ fn write_index_inner(
             .join("index.html"),
     )?);
 
-    let (it_pre, it_post) = if idx_name.to_str().map(|i| i.is_empty()) == Some(true) {
+    let is_main_idx = idx_name.to_str().map(|i| i.is_empty()) == Some(true);
+
+    let (it_pre, it_post) = if is_main_idx {
         ("", "")
     } else {
         ("Ordner: ", " &mdash; ")
@@ -228,6 +230,13 @@ fn write_index_inner(
         &config.blog_name,
         &config.x_body_ph1,
     )?;
+
+    if !is_main_idx {
+        writeln!(
+            &mut f,
+            "<a href=\"..\">[&Uuml;bergeordneter Ordner]</a><br />"
+        )?;
+    }
 
     for i in ents.iter().rev() {
         writeln!(&mut f, "{}<br />", i)?;
