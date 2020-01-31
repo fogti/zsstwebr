@@ -6,6 +6,8 @@ use std::{fs::File, io::Write, path::Path};
 fn main() {
     use clap::Arg;
 
+    let null_path = Path::new("");
+
     let matches = clap::App::new("zsstwebr")
         .version(clap::crate_version!())
         .author("Erik Zscheile <erik.zscheile@gmail.com>")
@@ -118,8 +120,11 @@ base::back_to_idx(fpath), &config.x_nav,
             &cdatef, lnk, &rd.title
         ));
         {
-            let fpap = std::path::Path::new(fpath);
-            if let Some(x) = fpap.parent() {
+            let fpap = Path::new(fpath);
+            if let Some(x) = fpap
+                .parent()
+                .and_then(|x| if x == null_path { None } else { Some(x) })
+            {
                 let bname = fpap.file_name().unwrap();
                 subents
                     .entry(x.to_path_buf())
@@ -147,7 +152,6 @@ base::back_to_idx(fpath), &config.x_nav,
     kv.sort();
     kv.dedup();
 
-    let null_path = std::path::Path::new("");
     for i in kv {
         if i == null_path {
             continue;
@@ -190,9 +194,7 @@ fn write_index_inner(
     println!("- index: {}", idx_name.display());
 
     let mut f = std::io::BufWriter::new(std::fs::File::create(
-        std::path::Path::new(outdir)
-            .join(idx_name)
-            .join("index.html"),
+        Path::new(outdir).join(idx_name).join("index.html"),
     )?);
 
     let is_main_idx = idx_name.to_str().map(|i| i.is_empty()) == Some(true);
