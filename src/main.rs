@@ -107,8 +107,11 @@ fn main() {
 &config.x_body_ph1,
 base::back_to_idx(fpath), &config.x_nav,
 ).unwrap();
-                for i in mangler.mangle_content(t) {
-                    writeln!(&mut wr, "    {}", i).unwrap();
+                for (do_mangle, i) in mangler.mangle_content(t) {
+                    if do_mangle {
+                        write!(&mut wr, "    ").unwrap();
+                    }
+                    writeln!(&mut wr, "{}", i).unwrap();
                 }
                 writeln!(&mut wr, "  </body>\n</html>").unwrap();
                 (fpath, true)
@@ -166,7 +169,11 @@ base::back_to_idx(fpath), &config.x_nav,
     }
 
     for tag in tagents.keys() {
-        ents.push(format!("<a href=\"{}.html\">{}</a>", tag.replace('&', "&amp;"), tag));
+        ents.push(format!(
+            "<a href=\"{}.html\">{}</a>",
+            tag.replace('&', "&amp;"),
+            tag
+        ));
     }
 
     write_index(&config, outdir, "", &ents).expect("unable to write main-index");
@@ -276,9 +283,7 @@ fn write_tag_index(
 
     let mut fpath = Path::new(outdir).join(idx_name);
     fpath.set_extension("html");
-    let mut f = std::io::BufWriter::new(std::fs::File::create(
-        fpath,
-    )?);
+    let mut f = std::io::BufWriter::new(std::fs::File::create(fpath)?);
 
     write!(
         &mut f,

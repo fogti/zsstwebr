@@ -16,17 +16,21 @@ impl Mangler {
         }
     }
 
-    pub fn mangle_content<'a>(&self, input: &'a str) -> Vec<&'a str> {
+    /// You should only prepend each line with spaces if the associated $mangle boolean is 'true'.
+    pub fn mangle_content<'a>(&self, input: &'a str) -> Vec<(bool, &'a str)> {
         input
             .split("\n\n")
-            .flat_map(|section| {
-                if self.ahos.is_match(section) {
-                    vec![section]
-                } else {
+            .map(|section| (!self.ahos.is_match(section), section))
+            .flat_map(|(do_mangle, section)| {
+                if do_mangle {
                     vec!["<p>", section, "</p>"]
+                } else {
+                    vec![section]
                 }
+                .into_iter()
+                .flat_map(|i| i.lines())
+                .map(move |i| (do_mangle, i))
             })
-            .flat_map(|i| i.lines())
             .collect()
     }
 }
