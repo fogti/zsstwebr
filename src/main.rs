@@ -119,7 +119,7 @@ base::back_to_idx(fpath), &config.x_nav,
         };
         let cdatef = rd.cdate.format("%d.%m.%Y");
         let ent_str = format!("{}: <a href=\"{}\">{}</a>", &cdatef, lnk, &rd.title);
-        for i in std::mem::take(&mut rd.tags).into_iter() {
+        for i in std::mem::take(&mut rd.tags) {
             if is_valid_tag(&i) {
                 tagents.entry(i).or_default().push(ent_str.clone());
             } else {
@@ -168,7 +168,9 @@ base::back_to_idx(fpath), &config.x_nav,
         .push(format!("<a href=\"{}/index.html\">{}</a>", ibn, ibn));
     }
 
-    for tag in tagents.keys() {
+    let mut tags: Vec<_> = tagents.keys().collect();
+    tags.sort_unstable_by(|a, b| a.cmp(b).reverse());
+    for tag in tags {
         ents.push(format!(
             "<a href=\"{}.html\">{}</a>",
             tag.replace('&', "&amp;"),
