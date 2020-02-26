@@ -1,7 +1,44 @@
-mod base;
 mod mangle;
 
-use std::{collections::HashMap, fs::File, io::Write, path::Path};
+use chrono::prelude::*;
+use serde::Deserialize;
+use std::{collections::HashMap, collections::HashSet, fs::File, io::Write, path::Path};
+
+#[derive(Clone, Debug, Deserialize)]
+struct Config {
+    pub blog_name: String,
+    pub stylesheet: String,
+    #[serde(default)]
+    pub x_head: String,
+    #[serde(default)]
+    pub x_nav: String,
+    #[serde(default)]
+    pub x_body_ph1: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "typ", content = "c")]
+enum PostData {
+    Link(String),
+    Text {
+        #[serde(default)]
+        x_nav: String,
+        content: String,
+    },
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct Post {
+    pub cdate: NaiveDate,
+    pub title: String,
+    #[serde(default)]
+    pub author: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub x_head: String,
+    pub data: PostData,
+}
 
 fn main() {
     use clap::Arg;
@@ -69,7 +106,7 @@ fn main() {
     let outdir = matches.value_of("output_dir").unwrap();
     std::fs::create_dir_all(&outdir).expect("unable to create output directory");
 
-    let config: base::Config = {
+    let config: Config = {
         let mut fh =
             File::open(matches.value_of("config").unwrap()).expect("unable to open config file");
         let fh_data =
@@ -82,10 +119,10 @@ fn main() {
     let mut tagents = HashMap::<_, Vec<_>>::new();
     let mut subents = HashMap::<_, Vec<_>>::new();
 
-    base::tr_folder2(indir, &outdir, |fpath, mut rd: base::Post, mut wr| {
+    tr_folder2(indir, &outdir, |fpath, mut rd: Post, mut wr| {
         let (lnk, ret): (&str, bool) = match &rd.data {
-            base::PostData::Link(ref l) => (&l, false),
-            base::PostData::Text(ref t) => {
+            PostData::Link(ref l) => (&l, false),
+            PostData::Text { x_nav: ref t_x_nav, ref content } => {
                 writeln!(
                     &mut wr,
                     r##"<!doctype html>
@@ -98,27 +135,35 @@ fn main() {
 {}{}  </head>
   <body>
     <h1>{}</h1>
-{}    <a href="#" onclick="window.history.back()">Zur&uuml;ck zur vorherigen Seite</a> - <a href="{}">Zur&uuml;ck zur Hauptseite</a>{}<br />
+{}    <a href="#" onclick="window.history.back()">Zur&uuml;ck zur vorherigen Seite</a> - <a href="{}">Zur&uuml;ck zur Hauptseite</a>{}{}<br />
 "##,
     &config.stylesheet,
     &rd.title, &config.blog_name,
 &config.x_head, &rd.x_head,
 &rd.title,
 &config.x_body_ph1,
-base::back_to_idx(fpath), &config.x_nav,
+back_to_idx(fpath), &config.x_nav, &t_x_nav,
 ).unwrap();
-                for (do_mangle, i) in mangler.mangle_content(t) {
+                for (do_mangle, i) in mangler.mangle_content(&content) {
                     if do_mangle {
                         write!(&mut wr, "    ").unwrap();
                     }
                     writeln!(&mut wr, "{}", i).unwrap();
+                }
+                if !rd.author.is_empty() {
+                    writeln!(&mut wr, "    <p>Autor: {}</p>", &rd.author).unwrap();
                 }
                 writeln!(&mut wr, "  </body>\n</html>").unwrap();
                 (fpath, true)
             }
         };
         let cdatef = rd.cdate.format("%d.%m.%Y");
-        let ent_str = format!("{}: <a href=\"{}\">{}</a>", &cdatef, lnk, &rd.title);
+        let mut ent_str = format!("{}: <a href=\"{}\">{}</a>", &cdatef, lnk, &rd.title);
+        if !rd.author.is_empty() {
+            ent_str += " <span class=\"authorspec\">by ";
+            ent_str += &rd.author;
+            ent_str += "</span>";
+        }
         for i in std::mem::take(&mut rd.tags) {
             if is_valid_tag(&i) {
                 tagents.entry(i).or_default().push(ent_str.clone());
@@ -189,6 +234,74 @@ base::back_to_idx(fpath), &config.x_nav,
     }
 }
 
+fn ghandle_res2ok<T, E>(nam: &'static str) -> impl Fn(Result<T, E>) -> Option<T>
+where
+    E: std::error::Error,
+{
+    move |i| match i {
+        Ok(x) => Some(x),
+        Err(e) => {
+            eprintln!("{} error: {}", nam, e);
+            None
+        }
+    }
+}
+
+fn tr_folder2<P, F, T>(inp: P, outp: P, mut f: F)
+where
+    P: AsRef<std::path::Path>,
+    F: FnMut(&str, T, std::io::BufWriter<File>) -> bool,
+    T: for<'de> serde::de::Deserialize<'de>,
+{
+    let mut crds = HashSet::new();
+    let inp = inp.as_ref();
+    let outp = outp.as_ref();
+
+    for (i, fh_data) in glob::glob(inp.join("**/*.yaml").to_str().unwrap())
+        .expect("invalid source path")
+        .filter_map(ghandle_res2ok("glob"))
+        .map(|i| {
+            let mut fh = File::open(&i)?;
+            let fh_data =
+                readfilez::read_part_from_file(&mut fh, 0, readfilez::LengthSpec::new(None, true))?;
+            std::io::Result::<_>::Ok((i, fh_data))
+        })
+        .filter_map(ghandle_res2ok("file open"))
+    {
+        let stin = i
+            .strip_prefix(inp)
+            .expect("unable to strip path prefix")
+            .with_extension("html");
+        let outfilp = outp.join(&stin);
+        if let Some(x) = outfilp.parent() {
+            if !crds.contains(x) {
+                std::fs::create_dir_all(x).expect("unable to create output directory");
+                crds.insert(x.to_path_buf());
+            }
+        }
+        let stin = stin.to_str().expect("got invalid file name");
+        println!("- {} ", stin);
+        let fhout = std::fs::File::create(&outfilp).expect("unable to create output file");
+        if !f(
+            stin,
+            serde_yaml::from_slice(&*fh_data).expect("unable to decode file as YAML"),
+            std::io::BufWriter::new(fhout),
+        ) {
+            std::fs::remove_file(&outfilp).expect("unable to remove output file");
+        }
+    }
+}
+
+fn back_to_idx<P: AsRef<std::path::Path>>(p: P) -> String {
+    let ccnt = p.as_ref().components().count() - 1;
+    let mut ret = String::with_capacity(ccnt * 3 + 10);
+    for _ in 0..ccnt {
+        ret += "../";
+    }
+    ret += "index.html";
+    ret
+}
+
 fn is_valid_tag(tag: &str) -> bool {
     !(tag.is_empty()
         || tag.contains(|i| match i {
@@ -198,7 +311,7 @@ fn is_valid_tag(tag: &str) -> bool {
 }
 
 fn write_index<P1, P2>(
-    config: &base::Config,
+    config: &Config,
     outdir: P1,
     idx_name: P2,
     ents: &[String],
@@ -211,7 +324,7 @@ where
 }
 
 fn write_index_inner(
-    config: &base::Config,
+    config: &Config,
     outdir: &Path,
     idx_name: &Path,
     ents: &[String],
@@ -276,7 +389,7 @@ fn write_index_inner(
 }
 
 fn write_tag_index(
-    config: &base::Config,
+    config: &Config,
     outdir: &Path,
     idx_name: &str,
     ents: &[String],
