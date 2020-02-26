@@ -135,14 +135,22 @@ fn main() {
 {}{}  </head>
   <body>
     <h1>{}</h1>
-{}    <a href="#" onclick="window.history.back()">Zur&uuml;ck zur vorherigen Seite</a> - <a href="{}">Zur&uuml;ck zur Hauptseite</a>{}{}<br />
+{}    <a href="#" onclick="window.history.back()">Zur&uuml;ck zur vorherigen Seite</a> - <a href="{}">Zur&uuml;ck zur Hauptseite</a>{}
 "##,
     &config.stylesheet,
     &rd.title, &config.blog_name,
 &config.x_head, &rd.x_head,
 &rd.title,
 &config.x_body_ph1,
-back_to_idx(fpath), &config.x_nav, &t_x_nav,
+back_to_idx(fpath), &config.x_nav,
+).unwrap();
+                if !t_x_nav.is_empty() {
+                    write!(&mut wr, " - {}", &t_x_nav).unwrap();
+                }
+                writeln!(
+                    &mut wr,
+                    r#"<br />
+"#
 ).unwrap();
                 for (do_mangle, i) in mangler.mangle_content(&content) {
                     if do_mangle {
