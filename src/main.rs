@@ -145,11 +145,11 @@ fn main() {
 &rd.title,
 &config.x_body_ph1,
 back_to_idx(fpath), &config.x_nav,
-).unwrap();
+)?;
                 if !t_x_nav.is_empty() {
-                    write!(&mut wr, " - {}", &t_x_nav).unwrap();
+                    write!(&mut wr, " - {}", &t_x_nav)?;
                 }
-                write!(&mut wr, "<br />").unwrap();
+                write!(&mut wr, "<br />")?;
                 let mut it = mangler.mangle_content(&content);
                 if let Some((do_mangle, i)) = it.next() {
                     if do_mangle {
@@ -157,19 +157,19 @@ back_to_idx(fpath), &config.x_nav,
                     } else {
                         writeln!(&mut wr, "<br />")
                     }
-                    .unwrap();
-                    writeln!(&mut wr, "{}", i).unwrap();
+                    ?;
+                    writeln!(&mut wr, "{}", i)?;
                 }
                 for (do_mangle, i) in it {
                     if do_mangle {
-                        write!(&mut wr, "    ").unwrap();
+                        write!(&mut wr, "    ")?;
                     }
-                    writeln!(&mut wr, "{}", i).unwrap();
+                    writeln!(&mut wr, "{}", i)?;
                 }
                 if !rd.author.is_empty() {
-                    writeln!(&mut wr, "    <p>Autor: {}</p>", &rd.author).unwrap();
+                    writeln!(&mut wr, "    <p>Autor: {}</p>", &rd.author)?;
                 }
-                writeln!(&mut wr, "  </body>\n</html>").unwrap();
+                writeln!(&mut wr, "  </body>\n</html>")?;
                 (fpath, true)
             }
         };
@@ -205,8 +205,8 @@ back_to_idx(fpath), &config.x_nav,
                 &rd.title
             ));
         }
-        ret
-    });
+        Ok(ret)
+    }).expect("I/O error while transforming dirs");
 
     let mut kv: Vec<std::path::PathBuf> = subents
         .keys()
@@ -263,10 +263,10 @@ where
     }
 }
 
-fn tr_folder2<P, F, T>(inp: P, outp: P, mut f: F)
+fn tr_folder2<P, F, T>(inp: P, outp: P, mut f: F) -> std::io::Result<()>
 where
     P: AsRef<std::path::Path>,
-    F: FnMut(&str, T, std::io::BufWriter<File>) -> bool,
+    F: FnMut(&str, T, &mut std::io::BufWriter<File>) -> std::io::Result<bool>,
     T: for<'de> serde::de::Deserialize<'de>,
 {
     let mut crds = HashSet::new();
@@ -291,21 +291,35 @@ where
         let outfilp = outp.join(&stin);
         if let Some(x) = outfilp.parent() {
             if !crds.contains(x) {
-                std::fs::create_dir_all(x).expect("unable to create output directory");
+                std::fs::create_dir_all(x)?;
                 crds.insert(x.to_path_buf());
             }
         }
         let stin = stin.to_str().expect("got invalid file name");
         println!("- {} ", stin);
-        let fhout = std::fs::File::create(&outfilp).expect("unable to create output file");
-        if !f(
+        let fhout = std::fs::File::create(&outfilp)?;
+        let mut bw = std::io::BufWriter::new(fhout);
+        match f(
             stin,
             serde_yaml::from_slice(&*fh_data).expect("unable to decode file as YAML"),
-            std::io::BufWriter::new(fhout),
+            &mut bw,
         ) {
-            std::fs::remove_file(&outfilp).expect("unable to remove output file");
+            Ok(true) => {
+                bw.flush()?;
+                bw.into_inner()?.sync_all()?;
+            }
+            Ok(false) => {
+                std::mem::drop(bw);
+                std::fs::remove_file(&outfilp)?;
+            }
+            Err(x) => {
+                std::mem::drop(bw);
+                std::fs::remove_file(&outfilp)?;
+                return Err(x);
+            }
         }
     }
+    Ok(())
 }
 
 fn back_to_idx<P: AsRef<std::path::Path>>(p: P) -> String {
@@ -401,6 +415,7 @@ fn write_index_inner(
     writeln!(&mut f, "</tt>\n  </body>\n</html>")?;
 
     f.flush()?;
+    f.into_inner()?.sync_all()?;
     Ok(())
 }
 
@@ -447,5 +462,6 @@ fn write_tag_index(
 
     writeln!(&mut f, "</tt>\n  </body>\n</html>")?;
     f.flush()?;
+    f.into_inner()?.sync_all()?;
     Ok(())
 }
