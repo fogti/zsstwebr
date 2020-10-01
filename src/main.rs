@@ -138,8 +138,7 @@ fn main() {
 {}{}  </head>
   <body>
     <h1>{}</h1>
-{}    <a href="#" onclick="window.history.back()">Zur&uuml;ck zur vorherigen Seite</a> - <a href="{}">Zur&uuml;ck zur Hauptseite</a>{}
-"##,
+{}    <a href="#" onclick="window.history.back()">Zur&uuml;ck zur vorherigen Seite</a> - <a href="{}">Zur&uuml;ck zur Hauptseite</a>{}"##,
     &config.stylesheet,
     &rd.title, &config.blog_name,
 &config.x_head, &rd.x_head,
@@ -152,7 +151,7 @@ back_to_idx(fpath), &config.x_nav,
                 }
                 writeln!(
                     &mut wr,
-                    r#"<br />
+                    r#"<br /><br />
 "#
                 )
                 .unwrap();
