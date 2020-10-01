@@ -149,13 +149,18 @@ back_to_idx(fpath), &config.x_nav,
                 if !t_x_nav.is_empty() {
                     write!(&mut wr, " - {}", &t_x_nav).unwrap();
                 }
-                writeln!(
-                    &mut wr,
-                    r#"<br /><br />
-"#
-                )
-                .unwrap();
-                for (do_mangle, i) in mangler.mangle_content(&content) {
+                write!(&mut wr, "<br />").unwrap();
+                let mut it = mangler.mangle_content(&content);
+                if let Some((do_mangle, i)) = it.next() {
+                    if do_mangle {
+                        write!(&mut wr, "\n    ")
+                    } else {
+                        writeln!(&mut wr, "<br />")
+                    }
+                    .unwrap();
+                    writeln!(&mut wr, "{}", i).unwrap();
+                }
+                for (do_mangle, i) in it {
                     if do_mangle {
                         write!(&mut wr, "    ").unwrap();
                     }
