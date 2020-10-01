@@ -11,6 +11,50 @@ fn diiter<T>(a: T, b: T) -> impl Iterator<Item = T> {
     once(a).chain(once(b))
 }
 
+struct SectionState<'i> {
+    do_mangle: bool,
+    section: core::str::Lines<'i>,
+}
+
+pub struct MangleIter<'a, 'i> {
+    ahos: &'a AhoCorasick,
+    input: core::str::Split<'i, &'static str>,
+    state: Option<SectionState<'i>>,
+}
+
+impl<'a, 'i> Iterator for MangleIter<'a, 'i> {
+    type Item = (bool, &'i str);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.state.take() {
+                None => {
+                    let section = self.input.next()?;
+                    let do_mangle = !self.ahos.is_match(section);
+                    let section = section.lines();
+                    self.state = Some(SectionState { do_mangle, section });
+                    if do_mangle {
+                        break Some((true, "<p>"));
+                    }
+                }
+                Some(SectionState {
+                    do_mangle,
+                    mut section,
+                }) => {
+                    let (state, ret) = match section.next() {
+                        None => (None, if do_mangle { Some("</p>") } else { None }),
+                        x => (Some(SectionState { do_mangle, section }), x),
+                    };
+                    self.state = state;
+                    if let Some(x) = ret {
+                        break Some((do_mangle, x));
+                    }
+                }
+            }
+        }
+    }
+}
+
 impl Mangler {
     pub fn new(dont_mangle: &[&str]) -> Mangler {
         let pats: Vec<_> = dont_mangle
@@ -23,19 +67,12 @@ impl Mangler {
     }
 
     /// You should only prepend each line with spaces if the associated $mangle boolean is 'true'.
-    pub fn mangle_content<'b, 'a: 'b>(&'b self, input: &'a str) -> impl Iterator<Item = (bool, &'a str)> + 'b {
-        input
-            .split("\n\n")
-            .flat_map(move |section| {
-                let do_mangle = !self.ahos.is_match(section);
-                if do_mangle {
-                    vec!["<p>", section, "</p>"]
-                } else {
-                    vec![section]
-                }
-                .into_iter()
-                .flat_map(|i| i.lines())
-                .map(move |i| (do_mangle, i))
-            })
+    #[inline]
+    pub fn mangle_content<'a, 'i>(&'a self, input: &'i str) -> MangleIter<'a, 'i> {
+        MangleIter {
+            ahos: &self.ahos,
+            input: input.split("\n\n"),
+            state: None,
+        }
     }
 }

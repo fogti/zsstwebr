@@ -122,7 +122,10 @@ fn main() {
     tr_folder2(indir, &outdir, |fpath, mut rd: Post, mut wr| {
         let (lnk, ret): (&str, bool) = match &rd.data {
             PostData::Link(ref l) => (&l, false),
-            PostData::Text { x_nav: ref t_x_nav, ref content } => {
+            PostData::Text {
+                x_nav: ref t_x_nav,
+                ref content,
+            } => {
                 writeln!(
                     &mut wr,
                     r##"<!doctype html>
@@ -151,7 +154,8 @@ back_to_idx(fpath), &config.x_nav,
                     &mut wr,
                     r#"<br />
 "#
-).unwrap();
+                )
+                .unwrap();
                 for (do_mangle, i) in mangler.mangle_content(&content) {
                     if do_mangle {
                         write!(&mut wr, "    ").unwrap();
