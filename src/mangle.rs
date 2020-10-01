@@ -23,11 +23,11 @@ impl Mangler {
     }
 
     /// You should only prepend each line with spaces if the associated $mangle boolean is 'true'.
-    pub fn mangle_content<'a>(&self, input: &'a str) -> Vec<(bool, &'a str)> {
+    pub fn mangle_content<'b, 'a: 'b>(&'b self, input: &'a str) -> impl Iterator<Item = (bool, &'a str)> + 'b {
         input
             .split("\n\n")
-            .map(|section| (!self.ahos.is_match(section), section))
-            .flat_map(|(do_mangle, section)| {
+            .flat_map(move |section| {
+                let do_mangle = !self.ahos.is_match(section);
                 if do_mangle {
                     vec!["<p>", section, "</p>"]
                 } else {
@@ -37,6 +37,5 @@ impl Mangler {
                 .flat_map(|i| i.lines())
                 .map(move |i| (do_mangle, i))
             })
-            .collect()
     }
 }
