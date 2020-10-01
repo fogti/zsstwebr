@@ -5,11 +5,17 @@ pub struct Mangler {
     ahos: AhoCorasick,
 }
 
+#[inline]
+fn diiter<T>(a: T, b: T) -> impl Iterator<Item = T> {
+    use core::iter::once;
+    once(a).chain(once(b))
+}
+
 impl Mangler {
-    pub fn new(dont_mangle: Vec<&str>) -> Mangler {
+    pub fn new(dont_mangle: &[&str]) -> Mangler {
         let pats: Vec<_> = dont_mangle
-            .into_iter()
-            .flat_map(|i| vec!["<".to_string() + i + ">", "</".to_string() + i + ">"])
+            .iter()
+            .flat_map(|&i| diiter("<".to_string() + i + ">", "</".to_string() + i + ">"))
             .collect();
         Mangler {
             ahos: AhoCorasick::new_auto_configured(&pats),

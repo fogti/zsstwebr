@@ -72,7 +72,7 @@ fn main() {
         )
         .get_matches();
 
-    let mangler = mangle::Mangler::new(vec![
+    let mangler = mangle::Mangler::new(&[
         "address",
         "article",
         "aside",
