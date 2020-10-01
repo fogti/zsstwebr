@@ -12,3 +12,7 @@ glob = "0.3"
 readfilez = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
+
+[dependencies.tera]
+version = "1"
+default-features = false

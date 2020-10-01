@@ -1,0 +1,11 @@
+{{ extend "base.html" }}
+{% block nav -%}
+    <a href="#" onclick="window.history.back()">Zur&uuml;ck zur vorherigen Seite</a> - <a href="{{ midx_url }}">Zur&uuml;ck zur Hauptseite</a>{{ config.x_nav -}}
+{% if x_nav %} - {{ x_nav }}{% endif %}<br />
+{% endblock nav -%}
+{% block content -%}
+{{ content | safe }}
+{% if author %}
+    <p>Autor: {{ author }}</p><br />
+{% endif %}
+{% endblock content -%}

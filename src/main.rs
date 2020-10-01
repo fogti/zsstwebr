@@ -1,10 +1,11 @@
 mod mangle;
 
 use chrono::prelude::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, collections::HashSet, fs::File, io::Write, path::Path};
+use tera::Context;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct Config {
     pub blog_name: String,
     pub stylesheet: String,
@@ -115,6 +116,17 @@ fn main() {
         serde_yaml::from_slice(&*fh_data).expect("unable to decode file as YAML")
     };
 
+    let mut tera = tera::Tera::default();
+    tera.add_raw_template("base.html", include_str!("base.html")).unwrap();
+    tera.add_raw_template("index.html", include_str!("index.html")).unwrap();
+    tera.add_raw_template("index_folder.html", include_str!("index_folder.html")).unwrap();
+    tera.add_raw_template("index_tag.html", include_str!("index_tag.html")).unwrap();
+    tera.add_raw_template("article.html", include_str!("article.html")).unwrap();
+    let tera = tera;
+    let mut glctx = Context::new();
+    glctx.insert("config", &config);
+    let glctx = glctx;
+
     let mut ents = Vec::new();
     let mut tagents = HashMap::<_, Vec<_>>::new();
     let mut subents = HashMap::<_, Vec<_>>::new();
@@ -126,46 +138,24 @@ fn main() {
                 x_nav: ref t_x_nav,
                 ref content,
             } => {
-                writeln!(
-                    &mut wr,
-                    r##"<!doctype html>
-<html lang="de" dir="ltr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{}" type="text/css" />
-    <title>{} &mdash; {}</title>
-{}{}  </head>
-  <body>
-    <h1>{}</h1>
-{}    <a href="#" onclick="window.history.back()">Zur&uuml;ck zur vorherigen Seite</a> - <a href="{}">Zur&uuml;ck zur Hauptseite</a>{}
-"##,
-    &config.stylesheet,
-    &rd.title, &config.blog_name,
-&config.x_head, &rd.x_head,
-&rd.title,
-&config.x_body_ph1,
-back_to_idx(fpath), &config.x_nav,
-).unwrap();
-                if !t_x_nav.is_empty() {
-                    write!(&mut wr, " - {}", &t_x_nav).unwrap();
-                }
-                writeln!(
-                    &mut wr,
-                    r#"<br />
-"#
-                )
-                .unwrap();
+                let mut ctx = glctx.clone();
+                ctx.insert("author", &rd.author);
+                ctx.insert("title", &rd.title);
+                ctx.insert("midx_url", &back_to_idx(fpath));
+                ctx.insert("x_head", &rd.x_head);
+                ctx.insert("x_nav", t_x_nav);
+
+                let mut contento = String::new();
                 for (do_mangle, i) in mangler.mangle_content(&content) {
                     if do_mangle {
-                        write!(&mut wr, "    ").unwrap();
+                        contento += "    ";
                     }
-                    writeln!(&mut wr, "{}", i).unwrap();
+                    contento += i;
+                    contento.push('\n');
                 }
-                if !rd.author.is_empty() {
-                    writeln!(&mut wr, "    <p>Autor: {}</p>", &rd.author).unwrap();
-                }
-                writeln!(&mut wr, "  </body>\n</html>").unwrap();
+                ctx.insert("content", &contento);
+                wr.write(tera.render("article.html", &ctx).expect("article rendering failed").as_bytes()).unwrap();
+
                 (fpath, true)
             }
         };
@@ -235,14 +225,14 @@ back_to_idx(fpath), &config.x_nav,
         ));
     }
 
-    write_index(&config, outdir, "", &ents).expect("unable to write main-index");
+    write_index(&tera, &glctx, outdir, "", &ents).expect("unable to write main-index");
 
     for (subdir, p_ents) in subents.iter() {
-        write_index(&config, outdir, subdir, &p_ents).expect("unable to write sub-index");
+        write_index(&tera, &glctx, outdir, subdir, &p_ents).expect("unable to write sub-index");
     }
 
     for (tag, p_ents) in tagents.iter() {
-        write_tag_index(&config, outdir.as_ref(), tag, &p_ents).expect("unable to write tag-index");
+        write_tag_index(&tera, &glctx, outdir.as_ref(), tag, &p_ents).expect("unable to write tag-index");
     }
 }
 
@@ -323,7 +313,8 @@ fn is_valid_tag(tag: &str) -> bool {
 }
 
 fn write_index<P1, P2>(
-    config: &Config,
+    tera: &tera::Tera,
+    glctx: &Context,
     outdir: P1,
     idx_name: P2,
     ents: &[String],
@@ -332,76 +323,25 @@ where
     P1: AsRef<Path>,
     P2: AsRef<Path>,
 {
-    write_index_inner(config, outdir.as_ref(), idx_name.as_ref(), ents)
-}
-
-fn write_index_inner(
-    config: &Config,
-    outdir: &Path,
-    idx_name: &Path,
-    ents: &[String],
-) -> std::io::Result<()> {
+    let outdir = outdir.as_ref();
+    let idx_name = idx_name.as_ref();
     println!("- index: {}", idx_name.display());
 
     let mut f = std::io::BufWriter::new(std::fs::File::create(
         Path::new(outdir).join(idx_name).join("index.html"),
     )?);
 
-    let is_main_idx = idx_name.to_str().map(|i| i.is_empty()) == Some(true);
-
-    let (it_pre, it_post) = if is_main_idx {
-        ("", "")
-    } else {
-        ("Ordner: ", " &mdash; ")
-    };
-
-    write!(
-        &mut f,
-        r#"<!doctype html>
-<html lang="de" dir="ltr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{}" type="text/css" />
-    <title>{}{}{}{}</title>
-{}  </head>
-  <body>
-    <h1>{}{}{}{}</h1>
-{}
-<tt>
-"#,
-        &config.stylesheet,
-        it_pre,
-        idx_name.to_str().unwrap(),
-        it_post,
-        &config.blog_name,
-        &config.x_head,
-        it_pre,
-        idx_name.to_str().unwrap(),
-        it_post,
-        &config.blog_name,
-        &config.x_body_ph1,
-    )?;
-
-    if !is_main_idx {
-        writeln!(
-            &mut f,
-            "<a href=\"..\">[&Uuml;bergeordneter Ordner]</a><br />"
-        )?;
-    }
-
-    for i in ents.iter().rev() {
-        writeln!(&mut f, "{}<br />", i)?;
-    }
-
-    writeln!(&mut f, "</tt>\n  </body>\n</html>")?;
-
+    let mut ctx = glctx.clone();
+    ctx.insert("idx_name", idx_name.to_str().expect("got non-utf8 index name"));
+    ctx.insert("ents", ents);
+    f.write(tera.render("index_folder.html", &ctx).expect("article rendering failed").as_bytes())?;
     f.flush()?;
     Ok(())
 }
 
 fn write_tag_index(
-    config: &Config,
+    tera: &tera::Tera,
+    glctx: &Context,
     outdir: &Path,
     idx_name: &str,
     ents: &[String],
@@ -412,36 +352,10 @@ fn write_tag_index(
     fpath.set_extension("html");
     let mut f = std::io::BufWriter::new(std::fs::File::create(fpath)?);
 
-    write!(
-        &mut f,
-        r#"<!doctype html>
-<html lang="de" dir="ltr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{}" type="text/css" />
-    <title>Tag: {} &mdash; {}</title>
-{}  </head>
-  <body>
-    <h1>Tag: {} &mdash; {}</h1>
-{}
-<tt>
-<a href="index.html">[Hauptseite]</a><br />
-"#,
-        &config.stylesheet,
-        &idx_name,
-        &config.blog_name,
-        &config.x_head,
-        &idx_name,
-        &config.blog_name,
-        &config.x_body_ph1,
-    )?;
-
-    for i in ents.iter().rev() {
-        writeln!(&mut f, "{}<br />", i)?;
-    }
-
-    writeln!(&mut f, "</tt>\n  </body>\n</html>")?;
+    let mut ctx = glctx.clone();
+    ctx.insert("idx_name", &format!("Tag: {}", idx_name));
+    ctx.insert("ents", ents);
+    f.write(tera.render("index_tag.html", &ctx).expect("article rendering failed").as_bytes())?;
     f.flush()?;
     Ok(())
 }

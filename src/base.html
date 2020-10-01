@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="de" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{{ config.stylesheet }}" type="text/css" />
+    <title>{% if title %}{{ title }} &mdash; {% endif %}{{ config.blog_name }}</title>
+{{ config.x_head }}{{ x_head }}  </head>
+  <body>
+    <h1>{% if title %}{{ title }}{% else %}{{ config.blog_name }}{% endif %}</h1>
+{{ config.x_body_ph1 }}{% if tt %}<tt>{% endif %}
+{% block nav %}{% endblock nav %}
+{% block content %}{% endblock content %}
+{% if tt %}</tt>{% endif %}
+  </body>
+</html>

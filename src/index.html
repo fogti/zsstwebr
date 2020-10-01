@@ -1,0 +1,7 @@
+{% set title = idx_name -%}{% set tt = 1 -%}
+{% extend "base.html" %}
+{% block content %}
+{% for i in ents | reverse -%}
+{{ i | safe }}<br />
+{% endfor -%}
+{% endblock content %}

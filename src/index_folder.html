@@ -1,0 +1,7 @@
+{% if idx_name %}{% set idx_name = "Ordner: " ~ idx_name %}{% endif -%}
+{% extend "index.html" -%}
+{% block nav -%}
+{% if idx_name -%}
+<a href="..">[&Uuml;bergeordneter Ordner]</a><br />
+{% endif -%}
+{% endblock nav -%}
