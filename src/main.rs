@@ -1,11 +1,16 @@
 mod mangle;
+mod ofmt;
+mod utils;
 
 use chrono::prelude::*;
 use serde::Deserialize;
-use std::{collections::HashMap, collections::HashSet, fs::File, io::Write, path::Path};
+use std::{collections::HashMap, fs::File, path::Path};
+
+use crate::ofmt::{write_article_page, write_index, write_tag_index};
+use crate::utils::*;
 
 #[derive(Clone, Debug, Deserialize)]
-struct Config {
+pub struct Config {
     pub blog_name: String,
     pub stylesheet: String,
     #[serde(default)]
@@ -18,7 +23,7 @@ struct Config {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "typ", content = "c")]
-enum PostData {
+pub enum PostData {
     Link(String),
     Text {
         #[serde(default)]
@@ -28,7 +33,7 @@ enum PostData {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-struct Post {
+pub struct Post {
     pub cdate: NaiveDate,
     pub title: String,
     #[serde(default)]
@@ -126,60 +131,19 @@ fn main() {
                 x_nav: ref t_x_nav,
                 ref content,
             } => {
-                writeln!(
+                write_article_page(
+                    &mangler,
+                    &config,
+                    fpath.as_ref(),
                     &mut wr,
-                    r##"<!doctype html>
-<html lang="de" dir="ltr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{}" type="text/css" />
-    <title>{} &mdash; {}</title>
-{}{}  </head>
-  <body>
-    <h1>{}</h1>
-{}    <a href="#" onclick="window.history.back()">Zur&uuml;ck zur vorherigen Seite</a> - <a href="{}">Zur&uuml;ck zur Hauptseite</a>{}"##,
-    &config.stylesheet,
-    &rd.title, &config.blog_name,
-&config.x_head, &rd.x_head,
-&rd.title,
-&config.x_body_ph1,
-back_to_idx(fpath), &config.x_nav,
-)?;
-                if !t_x_nav.is_empty() {
-                    write!(&mut wr, " - {}", &t_x_nav)?;
-                }
-                write!(&mut wr, "<br />")?;
-                let mut it = mangler.mangle_content(&content);
-                if let Some((do_mangle, i)) = it.next() {
-                    if do_mangle {
-                        write!(&mut wr, "\n    ")
-                    } else {
-                        writeln!(&mut wr, "<br />")
-                    }
-                    ?;
-                    writeln!(&mut wr, "{}", i)?;
-                }
-                for (do_mangle, i) in it {
-                    if do_mangle {
-                        write!(&mut wr, "    ")?;
-                    }
-                    writeln!(&mut wr, "{}", i)?;
-                }
-                if !rd.author.is_empty() {
-                    writeln!(&mut wr, "    <p>Autor: {}</p>", &rd.author)?;
-                }
-                writeln!(&mut wr, "  </body>\n</html>")?;
+                    &rd,
+                    &content,
+                    &t_x_nav,
+                )?;
                 (fpath, true)
             }
         };
-        let cdatef = rd.cdate.format("%d.%m.%Y");
-        let mut ent_str = format!("{}: <a href=\"{}\">{}</a>", &cdatef, lnk, &rd.title);
-        if !rd.author.is_empty() {
-            ent_str += " <span class=\"authorspec\">by ";
-            ent_str += &rd.author;
-            ent_str += "</span>";
-        }
+        let ent_str = fmt_article_link(&rd, lnk);
         for i in std::mem::take(&mut rd.tags) {
             if is_valid_tag(&i) {
                 tagents.entry(i).or_default().push(ent_str.clone());
@@ -194,19 +158,21 @@ back_to_idx(fpath), &config.x_nav,
             .and_then(|x| if x == null_path { None } else { Some(x) })
         {
             let bname = fpap.file_name().unwrap();
-            subents.entry(x.to_path_buf()).or_default().push(format!(
-                "{}: <a href=\"{}\">{}</a>",
-                &cdatef,
-                if lnk == fpath {
-                    bname.to_str().unwrap()
-                } else {
-                    lnk
-                },
-                &rd.title
-            ));
+            subents
+                .entry(x.to_path_buf())
+                .or_default()
+                .push(fmt_article_link(
+                    &rd,
+                    if lnk == fpath {
+                        bname.to_str().unwrap()
+                    } else {
+                        lnk
+                    },
+                ));
         }
         Ok(ret)
-    }).expect("I/O error while transforming dirs");
+    })
+    .expect("I/O error while transforming dirs");
 
     let mut kv: Vec<std::path::PathBuf> = subents
         .keys()
@@ -239,229 +205,14 @@ back_to_idx(fpath), &config.x_nav,
         ));
     }
 
-    write_index(&config, outdir, "", &ents).expect("unable to write main-index");
+    write_index(&config, outdir.as_ref(), "".as_ref(), &ents).expect("unable to write main-index");
 
     for (subdir, p_ents) in subents.iter() {
-        write_index(&config, outdir, subdir, &p_ents).expect("unable to write sub-index");
+        write_index(&config, outdir.as_ref(), subdir.as_ref(), &p_ents)
+            .expect("unable to write sub-index");
     }
 
     for (tag, p_ents) in tagents.iter() {
         write_tag_index(&config, outdir.as_ref(), tag, &p_ents).expect("unable to write tag-index");
     }
-}
-
-fn ghandle_res2ok<T, E>(nam: &'static str) -> impl Fn(Result<T, E>) -> Option<T>
-where
-    E: std::error::Error,
-{
-    move |i| match i {
-        Ok(x) => Some(x),
-        Err(e) => {
-            eprintln!("{} error: {}", nam, e);
-            None
-        }
-    }
-}
-
-fn tr_folder2<P, F, T>(inp: P, outp: P, mut f: F) -> std::io::Result<()>
-where
-    P: AsRef<std::path::Path>,
-    F: FnMut(&str, T, &mut std::io::BufWriter<File>) -> std::io::Result<bool>,
-    T: for<'de> serde::de::Deserialize<'de>,
-{
-    let mut crds = HashSet::new();
-    let inp = inp.as_ref();
-    let outp = outp.as_ref();
-
-    for (i, fh_data) in glob::glob(inp.join("**/*.yaml").to_str().unwrap())
-        .expect("invalid source path")
-        .filter_map(ghandle_res2ok("glob"))
-        .map(|i| {
-            let mut fh = File::open(&i)?;
-            let fh_data =
-                readfilez::read_part_from_file(&mut fh, 0, readfilez::LengthSpec::new(None, true))?;
-            std::io::Result::<_>::Ok((i, fh_data))
-        })
-        .filter_map(ghandle_res2ok("file open"))
-    {
-        let stin = i
-            .strip_prefix(inp)
-            .expect("unable to strip path prefix")
-            .with_extension("html");
-        let outfilp = outp.join(&stin);
-        if let Some(x) = outfilp.parent() {
-            if !crds.contains(x) {
-                std::fs::create_dir_all(x)?;
-                crds.insert(x.to_path_buf());
-            }
-        }
-        let stin = stin.to_str().expect("got invalid file name");
-        println!("- {} ", stin);
-        let fhout = std::fs::File::create(&outfilp)?;
-        let mut bw = std::io::BufWriter::new(fhout);
-        match f(
-            stin,
-            serde_yaml::from_slice(&*fh_data).expect("unable to decode file as YAML"),
-            &mut bw,
-        ) {
-            Ok(true) => {
-                bw.flush()?;
-                bw.into_inner()?.sync_all()?;
-            }
-            Ok(false) => {
-                std::mem::drop(bw);
-                std::fs::remove_file(&outfilp)?;
-            }
-            Err(x) => {
-                std::mem::drop(bw);
-                std::fs::remove_file(&outfilp)?;
-                return Err(x);
-            }
-        }
-    }
-    Ok(())
-}
-
-fn back_to_idx<P: AsRef<std::path::Path>>(p: P) -> String {
-    let ccnt = p.as_ref().components().count() - 1;
-    let mut ret = String::with_capacity(ccnt * 3 + 10);
-    for _ in 0..ccnt {
-        ret += "../";
-    }
-    ret += "index.html";
-    ret
-}
-
-fn is_valid_tag(tag: &str) -> bool {
-    !(tag.is_empty()
-        || tag.contains(|i| match i {
-            '.' | '/' | '\0' => true,
-            _ => false,
-        }))
-}
-
-fn write_index<P1, P2>(
-    config: &Config,
-    outdir: P1,
-    idx_name: P2,
-    ents: &[String],
-) -> std::io::Result<()>
-where
-    P1: AsRef<Path>,
-    P2: AsRef<Path>,
-{
-    write_index_inner(config, outdir.as_ref(), idx_name.as_ref(), ents)
-}
-
-fn write_index_inner(
-    config: &Config,
-    outdir: &Path,
-    idx_name: &Path,
-    ents: &[String],
-) -> std::io::Result<()> {
-    println!("- index: {}", idx_name.display());
-
-    let mut f = std::io::BufWriter::new(std::fs::File::create(
-        Path::new(outdir).join(idx_name).join("index.html"),
-    )?);
-
-    let is_main_idx = idx_name.to_str().map(|i| i.is_empty()) == Some(true);
-
-    let (it_pre, it_post) = if is_main_idx {
-        ("", "")
-    } else {
-        ("Ordner: ", " &mdash; ")
-    };
-
-    write!(
-        &mut f,
-        r#"<!doctype html>
-<html lang="de" dir="ltr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{}" type="text/css" />
-    <title>{}{}{}{}</title>
-{}  </head>
-  <body>
-    <h1>{}{}{}{}</h1>
-{}
-<tt>
-"#,
-        &config.stylesheet,
-        it_pre,
-        idx_name.to_str().unwrap(),
-        it_post,
-        &config.blog_name,
-        &config.x_head,
-        it_pre,
-        idx_name.to_str().unwrap(),
-        it_post,
-        &config.blog_name,
-        &config.x_body_ph1,
-    )?;
-
-    if !is_main_idx {
-        writeln!(
-            &mut f,
-            "<a href=\"..\">[&Uuml;bergeordneter Ordner]</a><br />"
-        )?;
-    }
-
-    for i in ents.iter().rev() {
-        writeln!(&mut f, "{}<br />", i)?;
-    }
-
-    writeln!(&mut f, "</tt>\n  </body>\n</html>")?;
-
-    f.flush()?;
-    f.into_inner()?.sync_all()?;
-    Ok(())
-}
-
-fn write_tag_index(
-    config: &Config,
-    outdir: &Path,
-    idx_name: &str,
-    ents: &[String],
-) -> std::io::Result<()> {
-    println!("- tag index: {}", &idx_name);
-
-    let mut fpath = Path::new(outdir).join(idx_name);
-    fpath.set_extension("html");
-    let mut f = std::io::BufWriter::new(std::fs::File::create(fpath)?);
-
-    write!(
-        &mut f,
-        r#"<!doctype html>
-<html lang="de" dir="ltr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{}" type="text/css" />
-    <title>Tag: {} &mdash; {}</title>
-{}  </head>
-  <body>
-    <h1>Tag: {} &mdash; {}</h1>
-{}
-<tt>
-<a href="index.html">[Hauptseite]</a><br />
-"#,
-        &config.stylesheet,
-        &idx_name,
-        &config.blog_name,
-        &config.x_head,
-        &idx_name,
-        &config.blog_name,
-        &config.x_body_ph1,
-    )?;
-
-    for i in ents.iter().rev() {
-        writeln!(&mut f, "{}<br />", i)?;
-    }
-
-    writeln!(&mut f, "</tt>\n  </body>\n</html>")?;
-    f.flush()?;
-    f.into_inner()?.sync_all()?;
-    Ok(())
 }
