@@ -124,7 +124,7 @@ fn main() {
 
     tr_folder2(indir, &outdir, |fpath, mut rd: Post, mut wr, content| {
         let (lnk, ret): (&str, bool) = match &rd.typ {
-            PostTyp::Link => (&content, false),
+            PostTyp::Link => (content.trim(), false),
             PostTyp::Text => {
                 write_article_page(
                     &mangler,
