@@ -22,10 +22,10 @@ pub struct Config {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "snake_case", tag = "typ", content = "c")]
-pub enum PostData {
-    Link(String),
-    Text(String),
+#[serde(rename_all = "snake_case")]
+pub enum PostTyp {
+    Link,
+    Text,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -39,8 +39,8 @@ pub struct Post {
     #[serde(default)]
     pub x_head: String,
     #[serde(default)]
-    x_nav: String,
-    pub data: PostData,
+    pub x_nav: String,
+    pub typ: PostTyp,
 }
 
 fn main() {
@@ -122,10 +122,10 @@ fn main() {
     let mut tagents = HashMap::<_, Vec<_>>::new();
     let mut subents = HashMap::<_, Vec<_>>::new();
 
-    tr_folder2(indir, &outdir, |fpath, mut rd: Post, mut wr| {
-        let (lnk, ret): (&str, bool) = match &rd.data {
-            PostData::Link(ref l) => (&l, false),
-            PostData::Text(ref content) => {
+    tr_folder2(indir, &outdir, |fpath, mut rd: Post, mut wr, content| {
+        let (lnk, ret): (&str, bool) = match &rd.typ {
+            PostTyp::Link => (&content, false),
+            PostTyp::Text => {
                 write_article_page(
                     &mangler,
                     &config,

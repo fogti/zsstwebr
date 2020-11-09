@@ -16,7 +16,7 @@ where
 pub fn tr_folder2<P, F, T>(inp: P, outp: P, mut f: F) -> std::io::Result<()>
 where
     P: AsRef<std::path::Path>,
-    F: FnMut(&str, T, &mut std::io::BufWriter<File>) -> std::io::Result<bool>,
+    F: FnMut(&str, T, &mut std::io::BufWriter<File>, &str) -> std::io::Result<bool>,
     T: for<'de> serde::de::Deserialize<'de>,
 {
     let mut crds = HashSet::new();
@@ -49,10 +49,15 @@ where
         println!("- {} ", stin);
         let fhout = std::fs::File::create(&outfilp)?;
         let mut bw = std::io::BufWriter::new(fhout);
+        let fh_data: &str = std::str::from_utf8(&*fh_data).expect("file doesn't contain UTF-8");
+        let fh_data_spl = fh_data.find("\n---\n").expect("unable to get file header");
+        let fh_data_hdr = &fh_data[..=fh_data_spl];
+        let fh_data_ctn = &fh_data[fh_data_spl + 5..];
         match f(
             stin,
-            serde_yaml::from_slice(&*fh_data).expect("unable to decode file as YAML"),
+            serde_yaml::from_str(fh_data_hdr).expect("unable to decode file as YAML"),
             &mut bw,
+            fh_data_ctn
         ) {
             Ok(true) => {
                 bw.flush()?;
