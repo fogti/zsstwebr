@@ -177,15 +177,13 @@ fn main() {
     let mut kv: Vec<std::path::PathBuf> = subents
         .keys()
         .flat_map(|i| i.ancestors())
+        .filter(|&i| i == null_path)
         .map(Path::to_path_buf)
         .collect();
     kv.sort();
     kv.dedup();
 
     for i in kv {
-        if i == null_path {
-            continue;
-        }
         let ibn = i.file_name().unwrap().to_str().unwrap();
         match i.parent() {
             None => &mut ents,
