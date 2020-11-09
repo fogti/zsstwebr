@@ -25,11 +25,7 @@ pub struct Config {
 #[serde(rename_all = "snake_case", tag = "typ", content = "c")]
 pub enum PostData {
     Link(String),
-    Text {
-        #[serde(default)]
-        x_nav: String,
-        content: String,
-    },
+    Text(String),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -42,6 +38,8 @@ pub struct Post {
     pub tags: Vec<String>,
     #[serde(default)]
     pub x_head: String,
+    #[serde(default)]
+    x_nav: String,
     pub data: PostData,
 }
 
@@ -127,10 +125,7 @@ fn main() {
     tr_folder2(indir, &outdir, |fpath, mut rd: Post, mut wr| {
         let (lnk, ret): (&str, bool) = match &rd.data {
             PostData::Link(ref l) => (&l, false),
-            PostData::Text {
-                x_nav: ref t_x_nav,
-                ref content,
-            } => {
+            PostData::Text(ref content) => {
                 write_article_page(
                     &mangler,
                     &config,
@@ -138,7 +133,6 @@ fn main() {
                     &mut wr,
                     &rd,
                     &content,
-                    &t_x_nav,
                 )?;
                 (fpath, true)
             }

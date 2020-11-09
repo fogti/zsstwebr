@@ -10,7 +10,6 @@ pub fn write_article_page<W: Write>(
     mut wr: W,
     rd: &Post,
     content: &str,
-    t_x_nav: &str,
 ) -> Result<()> {
     writeln!(
         &mut wr,
@@ -25,18 +24,18 @@ pub fn write_article_page<W: Write>(
   <body>
     <h1>{}</h1>
 {}    <a href="#" onclick="window.history.back()">Zur&uuml;ck zur vorherigen Seite</a> - <a href="{}">Zur&uuml;ck zur Hauptseite</a>{}"##,
-        &config.stylesheet,
-        &rd.title,
-        &config.blog_name,
-        &config.x_head,
-        &rd.x_head,
-        &rd.title,
-        &config.x_body_ph1,
+        config.stylesheet,
+        rd.title,
+        config.blog_name,
+        config.x_head,
+        rd.x_head,
+        rd.title,
+        config.x_body_ph1,
         back_to_idx(fpath),
-        &config.x_nav,
+        config.x_nav,
     )?;
-    if !t_x_nav.is_empty() {
-        write!(&mut wr, " - {}", &t_x_nav)?;
+    if !rd.x_nav.is_empty() {
+        write!(&mut wr, " - {}", rd.x_nav)?;
     }
     write!(&mut wr, "<br />")?;
     let mut it = mangler.mangle_content(&content);
@@ -55,7 +54,7 @@ pub fn write_article_page<W: Write>(
         writeln!(&mut wr, "{}", i)?;
     }
     if !rd.author.is_empty() {
-        writeln!(&mut wr, "    <p>Autor: {}</p>", &rd.author)?;
+        writeln!(&mut wr, "    <p>Autor: {}</p>", rd.author)?;
     }
     writeln!(&mut wr, "  </body>\n</html>")?;
     Ok(())
