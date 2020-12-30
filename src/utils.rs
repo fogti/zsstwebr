@@ -113,11 +113,7 @@ pub fn back_to_idx<P: AsRef<std::path::Path>>(p: P) -> String {
 }
 
 pub fn is_valid_tag(tag: &str) -> bool {
-    !(tag.is_empty()
-        || tag.contains(|i| match i {
-            '.' | '/' | '\0' => true,
-            _ => false,
-        }))
+    !(tag.is_empty() || tag.contains(|i| matches!(i, '.' | '/' | '\0')))
 }
 
 pub fn fmt_article_link(rd: &crate::Post, lnk: &str) -> String {
