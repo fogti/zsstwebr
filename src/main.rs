@@ -73,6 +73,12 @@ fn main() {
                 .required(true)
                 .help("sets the config file path"),
         )
+        .arg(
+            Arg::with_name("force-rebuild")
+                .short("f")
+                .long("force-rebuild")
+                .help("force overwriting of destination files even if the source files weren't modified")
+        )
         .get_matches();
 
     let mangler = mangle::Mangler::new(&[
@@ -109,63 +115,70 @@ fn main() {
     let outdir = matches.value_of("output_dir").unwrap();
     std::fs::create_dir_all(&outdir).expect("unable to create output directory");
 
-    let config: Config = {
+    let (config, config_mtime): (Config, Option<_>) = {
         let mut fh =
             File::open(matches.value_of("config").unwrap()).expect("unable to open config file");
+        let config_mtime = fh
+            .metadata()
+            .expect("unable to get config file stat()")
+            .modified()
+            .ok();
         let fh_data =
             readfilez::read_part_from_file(&mut fh, 0, readfilez::LengthSpec::new(None, true))
                 .expect("unable to read config file");
-        serde_yaml::from_slice(&*fh_data).expect("unable to decode file as YAML")
+        (
+            serde_yaml::from_slice(&*fh_data).expect("unable to decode file as YAML"),
+            config_mtime,
+        )
     };
 
     let mut ents = Vec::new();
     let mut tagents = HashMap::<_, Vec<_>>::new();
     let mut subents = HashMap::<_, Vec<_>>::new();
 
-    tr_folder2(indir, &outdir, |fpath, mut rd: Post, mut wr, content| {
-        let (lnk, ret): (&str, bool) = match &rd.typ {
-            PostTyp::Link => (content.trim(), false),
-            PostTyp::Text => {
-                write_article_page(
-                    &mangler,
-                    &config,
-                    fpath.as_ref(),
-                    &mut wr,
-                    &rd,
-                    &content,
-                )?;
-                (fpath, true)
+    tr_folder2(
+        config_mtime,
+        matches.is_present("force-rebuild"),
+        indir,
+        &outdir,
+        |fpath, mut rd: Post, mut wr, content| {
+            let (lnk, ret): (&str, bool) = match &rd.typ {
+                PostTyp::Link => (content.trim(), false),
+                PostTyp::Text => {
+                    write_article_page(&mangler, &config, fpath.as_ref(), &mut wr, &rd, &content)?;
+                    (fpath, true)
+                }
+            };
+            let ent_str = fmt_article_link(&rd, lnk);
+            for i in std::mem::take(&mut rd.tags) {
+                if is_valid_tag(&i) {
+                    tagents.entry(i).or_default().push(ent_str.clone());
+                } else {
+                    eprintln!("   - got invalid tag: {}", i);
+                }
             }
-        };
-        let ent_str = fmt_article_link(&rd, lnk);
-        for i in std::mem::take(&mut rd.tags) {
-            if is_valid_tag(&i) {
-                tagents.entry(i).or_default().push(ent_str.clone());
-            } else {
-                eprintln!("   - got invalid tag: {}", i);
+            ents.push(ent_str);
+            let fpap = Path::new(fpath);
+            if let Some(x) = fpap
+                .parent()
+                .and_then(|x| if x == null_path { None } else { Some(x) })
+            {
+                let bname = fpap.file_name().unwrap();
+                subents
+                    .entry(x.to_path_buf())
+                    .or_default()
+                    .push(fmt_article_link(
+                        &rd,
+                        if lnk == fpath {
+                            bname.to_str().unwrap()
+                        } else {
+                            lnk
+                        },
+                    ));
             }
-        }
-        ents.push(ent_str);
-        let fpap = Path::new(fpath);
-        if let Some(x) = fpap
-            .parent()
-            .and_then(|x| if x == null_path { None } else { Some(x) })
-        {
-            let bname = fpap.file_name().unwrap();
-            subents
-                .entry(x.to_path_buf())
-                .or_default()
-                .push(fmt_article_link(
-                    &rd,
-                    if lnk == fpath {
-                        bname.to_str().unwrap()
-                    } else {
-                        lnk
-                    },
-                ));
-        }
-        Ok(ret)
-    })
+            Ok(ret)
+        },
+    )
     .expect("I/O error while transforming dirs");
 
     let mut kv: Vec<std::path::PathBuf> = subents
