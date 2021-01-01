@@ -44,7 +44,7 @@ pub struct Post {
     pub typ: PostTyp,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum IndexTyp {
     Directory,
     Tag,
@@ -69,9 +69,15 @@ impl IndexEntry {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct IndexRef {
+    pub name: String,
+    pub typ: IndexTyp,
+}
+
 pub struct Index {
     pub typ: IndexTyp,
-    pub oidxrefs: Vec<String>,
+    pub oidxrefs: Vec<IndexRef>,
     pub ents: Vec<IndexEntry>,
 }
 
@@ -331,15 +337,16 @@ fn main() {
             Some(par) => subents.entry(par.to_path_buf()).or_default(),
         }
         .oidxrefs
-        .push(format!(
-            "{}/index.html",
-            i.file_name().unwrap().to_str().unwrap().to_string()
-        ));
+        .push(IndexRef {
+            name: i.file_name().unwrap().to_str().unwrap().to_string(),
+            typ: IndexTyp::Directory,
+        });
     }
 
-    mainidx
-        .oidxrefs
-        .extend(tagents.keys().map(|i| i.to_string()));
+    mainidx.oidxrefs.extend(tagents.keys().map(|i| IndexRef {
+        name: i.to_string(),
+        typ: IndexTyp::Tag,
+    }));
 
     write_index(&config, outdir, "".as_ref(), mainidx).expect("unable to write main-index");
 

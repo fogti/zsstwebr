@@ -129,20 +129,27 @@ pub fn write_index(
     let mut refline_len = 0;
 
     for i in data.oidxrefs.iter().rev() {
-        if (refline_len + i.len() + 3) > OIDXREFS_LINE_MAXLEN {
+        let il = i.name.len();
+        if (refline_len + il + 3) > OIDXREFS_LINE_MAXLEN {
             writeln!(&mut f, "{}<br />", refline)?;
             refline.clear();
             refline_len = 0;
         }
-        let cur = format!("<a href=\"{}.html\">{}</a>", i.replace('&', "&amp;"), i);
-        if refline.is_empty() {
-            refline = cur;
-            refline_len = i.len();
-        } else {
+        if !refline.is_empty() {
             refline += " - ";
-            refline += &cur;
-            refline_len += 3 + i.len();
+            refline_len += 3;
         }
+        refline += &format!(
+            "<a href=\"{}{}.html\">{}</a>",
+            i.name.replace('&', "&amp;"),
+            if i.typ == IndexTyp::Directory {
+                "/index"
+            } else {
+                ""
+            },
+            i.name
+        );
+        refline_len += il;
     }
     if !refline.is_empty() {
         writeln!(&mut f, "{}<br />", refline)?;
