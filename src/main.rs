@@ -298,7 +298,9 @@ fn main() {
     let mut tagline = String::new();
     for tag in tags.into_iter() {
         let cur = format!("<a href=\"{}.html\">{}</a>", tag.replace('&', "&amp;"), tag);
-        if (tagline.len() + cur.len()) <= 100 {
+        if tagline.is_empty() {
+            tagline = cur;
+        } else if (tagline.len() + cur.len()) <= 100 {
             tagline += " - ";
             tagline += &cur;
         } else {
