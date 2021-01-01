@@ -295,12 +295,18 @@ fn main() {
 
     let mut tags: Vec<_> = tagents.keys().collect();
     tags.sort_unstable_by(|a, b| a.cmp(b).reverse());
-    for tag in tags {
-        ents.push(format!(
-            "<a href=\"{}.html\">{}</a>",
-            tag.replace('&', "&amp;"),
-            tag
-        ));
+    let mut tagline = String::new();
+    for tag in tags.into_iter() {
+        let cur = format!("<a href=\"{}.html\">{}</a>", tag.replace('&', "&amp;"), tag);
+        if (tagline.len() + cur.len()) <= 100 {
+            tagline += " - ";
+            tagline += &cur;
+        } else {
+            ents.push(std::mem::replace(&mut tagline, cur));
+        }
+    }
+    if !tagline.is_empty() {
+        ents.push(tagline);
     }
 
     write_index(&config, outdir, "".as_ref(), &ents).expect("unable to write main-index");
