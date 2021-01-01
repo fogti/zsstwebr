@@ -85,13 +85,12 @@ impl Default for Index {
 }
 
 pub fn back_to_idx<P: AsRef<Path>>(p: P) -> String {
-    let ccnt = p.as_ref().components().count() - 1;
-    let mut ret = String::with_capacity(ccnt * 3 + 10);
-    for _ in 0..ccnt {
-        ret += "../";
-    }
-    ret += "index.html";
-    ret
+    use std::iter::{once, repeat};
+    repeat("../")
+        .take(p.as_ref().components().count() - 1)
+        .chain(once("index"))
+        .flat_map(|i| i.chars())
+        .collect()
 }
 
 pub fn is_valid_tag(tag: &str) -> bool {
