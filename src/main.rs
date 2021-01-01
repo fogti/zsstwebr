@@ -2,94 +2,10 @@ mod mangle;
 mod ofmt;
 mod utils;
 
-use chrono::naive::NaiveDate;
-use serde::Deserialize;
-use std::collections::{HashMap, HashSet};
-use std::{fs::File, path::Path};
-
 use crate::ofmt::{write_article_page, write_index};
 use crate::utils::*;
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct Config {
-    pub blog_name: String,
-    pub stylesheet: String,
-    #[serde(default)]
-    pub x_head: String,
-    #[serde(default)]
-    pub x_nav: String,
-    #[serde(default)]
-    pub x_body_ph1: String,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum PostTyp {
-    Link,
-    Text,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct Post {
-    pub cdate: NaiveDate,
-    pub title: String,
-    #[serde(default)]
-    pub author: String,
-    #[serde(default)]
-    pub tags: Vec<String>,
-    #[serde(default)]
-    pub x_head: String,
-    #[serde(default)]
-    pub x_nav: String,
-    pub typ: PostTyp,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum IndexTyp {
-    Directory,
-    Tag,
-}
-
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct IndexEntry {
-    pub cdate: NaiveDate,
-    pub href: String,
-    pub title: String,
-    pub author: String,
-}
-
-impl IndexEntry {
-    fn with_post_and_link(post: &Post, lnk: &str) -> Self {
-        Self {
-            cdate: post.cdate,
-            href: lnk.to_string(),
-            title: post.title.clone(),
-            author: post.author.clone(),
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct IndexRef {
-    pub name: String,
-    pub typ: IndexTyp,
-}
-
-pub struct Index {
-    pub typ: IndexTyp,
-    pub oidxrefs: Vec<IndexRef>,
-    pub ents: Vec<IndexEntry>,
-}
-
-impl Default for Index {
-    fn default() -> Self {
-        Self {
-            typ: IndexTyp::Directory,
-            oidxrefs: Vec::new(),
-            ents: Vec::new(),
-        }
-    }
-}
+use std::collections::{HashMap, HashSet};
+use std::{fs::File, path::Path};
 
 fn main() {
     use clap::Arg;
