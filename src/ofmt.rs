@@ -135,6 +135,12 @@ pub fn write_index(
             refline += " - ";
             refline += &cur;
         } else {
+            println!(
+                "break refline @ {} + {} + 3 = {}",
+                refline.len(),
+                cur.len(),
+                refline.len() + cur.len() + 3
+            );
             writeln!(&mut f, "{}<br />", refline)?;
             refline = cur;
         }
