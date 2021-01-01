@@ -3,7 +3,7 @@ use crate::{mangle::Mangler, Config, Index, IndexTyp, Post};
 use std::io::{Result, Write};
 use std::path::Path;
 
-const OIDXREFS_LINE_MAXLEN: usize = 200;
+const OIDXREFS_LINE_MAXLEN: usize = 100;
 
 pub fn write_article_page<W: Write>(
     mangler: &Mangler,
@@ -126,23 +126,22 @@ pub fn write_index(
     data.oidxrefs.sort_unstable();
 
     let mut refline = String::new();
+    let mut refline_len = 0;
 
     for i in data.oidxrefs.iter().rev() {
+        if (refline_len + i.len() + 3) > OIDXREFS_LINE_MAXLEN {
+            writeln!(&mut f, "{}<br />", refline)?;
+            refline.clear();
+            refline_len = 0;
+        }
         let cur = format!("<a href=\"{}.html\">{}</a>", i.replace('&', "&amp;"), i);
         if refline.is_empty() {
             refline = cur;
-        } else if (refline.len() + cur.len() + 3) <= OIDXREFS_LINE_MAXLEN {
+            refline_len = i.len();
+        } else {
             refline += " - ";
             refline += &cur;
-        } else {
-            println!(
-                "break refline @ {} + {} + 3 = {}",
-                refline.len(),
-                cur.len(),
-                refline.len() + cur.len() + 3
-            );
-            writeln!(&mut f, "{}<br />", refline)?;
-            refline = cur;
+            refline_len += 3 + i.len();
         }
     }
     if !refline.is_empty() {
