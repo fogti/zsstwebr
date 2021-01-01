@@ -14,6 +14,16 @@ where
     }
 }
 
+pub fn ghandle_res2ok_io<T>(nam: &'static str) -> impl Fn(Result<T, std::io::Error>) -> Option<T> {
+    move |i| match i {
+        Ok(x) => Some(x),
+        Err(e) => {
+            eprintln!("{} error: {} of kind {:?}", nam, e, e.kind());
+            None
+        }
+    }
+}
+
 pub fn back_to_idx<P: AsRef<Path>>(p: P) -> String {
     let ccnt = p.as_ref().components().count() - 1;
     let mut ret = String::with_capacity(ccnt * 3 + 10);

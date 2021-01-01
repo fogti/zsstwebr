@@ -153,7 +153,7 @@ fn main() {
                 readfilez::read_part_from_file(&mut fh, 0, readfilez::LengthSpec::new(None, true))?;
             std::io::Result::<_>::Ok((i, fh_meta, fh_data))
         })
-        .filter_map(ghandle_res2ok("file open"))
+        .filter_map(ghandle_res2ok_io("file open"))
     {
         let stin = dirent
             .path()
