@@ -142,19 +142,40 @@ fn main() {
     let indir = Path::new(indir);
     let outdir = Path::new(outdir);
 
-    for (dirent, fh_meta, fh_data) in walkdir::WalkDir::new(indir)
+    for dirent in walkdir::WalkDir::new(indir)
         .into_iter()
-        .filter_entry(|e| is_not_hidden(e)) // skip directories like .git
-        .filter_map(ghandle_res2ok("walkdir"))
-        .map(|i| {
-            let mut fh = File::open(i.path())?;
-            let fh_meta = fh.metadata()?;
-            let fh_data =
-                readfilez::read_part_from_file(&mut fh, 0, readfilez::LengthSpec::new(None, true))?;
-            std::io::Result::<_>::Ok((i, fh_meta, fh_data))
-        })
-        .filter_map(ghandle_res2ok_io("file open"))
+        // skip directories like .git
+        .filter_entry(|e| is_not_hidden(e))
     {
+        let dirent = match dirent {
+            Ok(x) => x,
+            Err(e) => {
+                eprintln!("walkdir error: {}", e);
+                continue;
+            }
+        };
+        let fh_meta = match std::fs::metadata(dirent.path()) {
+            Ok(x) => x,
+            Err(x) => {
+                eprintln!("stat() error @ {}: {}", dirent.path().display(), x);
+                continue;
+            }
+        };
+        if fh_meta.is_dir() {
+            continue;
+        }
+        let fh_data = match readfilez::read_from_file(File::open(dirent.path())) {
+            Ok(fh_data) => fh_data,
+            Err(x) => {
+                eprintln!(
+                    "open() or mmap() error @ {}: {}",
+                    dirent.path().display(),
+                    x
+                );
+                continue;
+            }
+        };
+
         let stin = dirent
             .path()
             .strip_prefix(indir)
