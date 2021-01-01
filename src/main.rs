@@ -268,12 +268,14 @@ fn main() {
         }
     }
 
+    ents.sort_unstable_by(|a, b| a.cmp(b).reverse());
+
     let mut kv: Vec<std::path::PathBuf> = subents
         .keys()
         .flat_map(|i| i.ancestors())
         .map(Path::to_path_buf)
         .collect();
-    kv.sort();
+    kv.sort_unstable();
     kv.dedup();
 
     for i in kv {
