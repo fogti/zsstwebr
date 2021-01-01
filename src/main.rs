@@ -227,19 +227,19 @@ fn main() {
             }
         };
 
-        let stin = dirent
+        let fpap = dirent
             .path()
             .strip_prefix(indir)
             .expect("unable to strip path prefix")
             .with_extension("html");
-        let outfilp = outdir.join(&stin);
+        let outfilp = outdir.join(&fpap);
         if let Some(x) = outfilp.parent() {
             if !crds.contains(x) {
                 std::fs::create_dir_all(x).expect("unable to create destination directory");
                 crds.insert(x.to_path_buf());
             }
         }
-        let stin = stin.to_str().expect("got invalid file name");
+        let stin = fpap.to_str().expect("got invalid file name");
         print!("- {}", stin);
         let fh_data: &str = std::str::from_utf8(&*fh_data).expect("file doesn't contain UTF-8");
         let fh_data_spl = fh_data.find("\n---\n").expect("unable to get file header");
@@ -247,8 +247,27 @@ fn main() {
             serde_yaml::from_str(&fh_data[..=fh_data_spl]).expect("unable to decode file as YAML");
         let content = &fh_data[fh_data_spl + 5..];
 
-        let lnk: &str = match &rd.typ {
-            PostTyp::Link => content.trim(),
+        let fparent = fpap
+            .parent()
+            .and_then(|x| if x == null_path { None } else { Some(x) });
+
+        let (lnk, is_rel): (std::borrow::Cow<str>, bool) = match &rd.typ {
+            PostTyp::Link => {
+                let lnk = content.trim();
+                if !(lnk.starts_with('/') || lnk.contains("://")) {
+                    // relative URL, we need to prefix it with fparent
+                    (
+                        if let Some(x) = fparent {
+                            format!("{}/{}", x.to_str().unwrap(), lnk).into()
+                        } else {
+                            lnk.into()
+                        },
+                        true,
+                    )
+                } else {
+                    (lnk.into(), false)
+                }
+            }
             PostTyp::Text => {
                 let mut do_build = true;
                 if !force_rebuild {
@@ -274,7 +293,7 @@ fn main() {
                         std::fs::File::create(&outfilp).expect("unable to open output file");
                     let wr = std::io::BufWriter::new(fhout);
                     if let Err(x) =
-                        write_article_page(&mangler, &config, stin.as_ref(), wr, &rd, &content)
+                        write_article_page(&mangler, &config, fpap.as_ref(), wr, &rd, &content)
                     {
                         std::fs::remove_file(&outfilp)
                             .expect("unable to remove corrupted output file");
@@ -286,11 +305,11 @@ fn main() {
                         );
                     }
                 }
-                stin
+                (stin.into(), true)
             }
         };
         println!();
-        let idxent = IndexEntry::with_post_and_link(&rd, lnk);
+        let idxent = IndexEntry::with_post_and_link(&rd, &lnk);
         for i in std::mem::take(&mut rd.tags) {
             if is_valid_tag(&i) {
                 tagents.entry(i).or_default().push(idxent.clone());
@@ -299,21 +318,17 @@ fn main() {
             }
         }
         mainidx.ents.push(idxent);
-        let fpap = Path::new(stin);
-        if let Some(x) = fpap
-            .parent()
-            .and_then(|x| if x == null_path { None } else { Some(x) })
-        {
+        if let Some(x) = fparent {
             subents
                 .entry(x.to_path_buf())
                 .or_default()
                 .ents
                 .push(IndexEntry::with_post_and_link(
                     &rd,
-                    if lnk == stin {
+                    if is_rel {
                         fpap.file_name().unwrap().to_str().unwrap()
                     } else {
-                        lnk
+                        &lnk
                     },
                 ));
         }
