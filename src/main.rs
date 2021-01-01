@@ -268,7 +268,7 @@ fn main() {
         }
     }
 
-    ents.sort_unstable_by(|a, b| a.0.cmp(&b.0).reverse());
+    ents.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
     let mut ents = ents.into_iter().map(|(_, i)| i).collect();
 
