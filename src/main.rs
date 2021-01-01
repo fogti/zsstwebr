@@ -331,7 +331,10 @@ fn main() {
             Some(par) => subents.entry(par.to_path_buf()).or_default(),
         }
         .oidxrefs
-        .push(i.file_name().unwrap().to_str().unwrap().to_string());
+        .push(format!(
+            "{}/index.html",
+            i.file_name().unwrap().to_str().unwrap().to_string()
+        ));
     }
 
     mainidx
