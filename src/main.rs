@@ -4,7 +4,8 @@ mod utils;
 
 use chrono::prelude::*;
 use serde::Deserialize;
-use std::{collections::HashMap, fs::File, path::Path};
+use std::collections::{HashMap, HashSet};
+use std::{fs::File, path::Path};
 
 use crate::ofmt::{write_article_page, write_index, write_tag_index};
 use crate::utils::*;
@@ -136,50 +137,112 @@ fn main() {
     let mut tagents = HashMap::<_, Vec<_>>::new();
     let mut subents = HashMap::<_, Vec<_>>::new();
 
-    tr_folder2(
-        config_mtime,
-        matches.is_present("force-rebuild"),
-        indir,
-        &outdir,
-        |fpath, mut rd: Post, mut wr, content| {
-            let (lnk, ret): (&str, bool) = match &rd.typ {
-                PostTyp::Link => (content.trim(), false),
-                PostTyp::Text => {
-                    write_article_page(&mangler, &config, fpath.as_ref(), &mut wr, &rd, &content)?;
-                    (fpath, true)
-                }
-            };
-            let ent_str = fmt_article_link(&rd, lnk);
-            for i in std::mem::take(&mut rd.tags) {
-                if is_valid_tag(&i) {
-                    tagents.entry(i).or_default().push(ent_str.clone());
-                } else {
-                    eprintln!("   - got invalid tag: {}", i);
+    let force_rebuild = matches.is_present("force-rebuild");
+    let mut crds = HashSet::new();
+    let indir = Path::new(indir);
+    let outdir = Path::new(outdir);
+
+    for (i, fh_meta, fh_data) in glob::glob(indir.join("**/*.yaml").to_str().unwrap())
+        .expect("invalid source path")
+        .filter_map(ghandle_res2ok("glob"))
+        .map(|i| {
+            let mut fh = File::open(&i)?;
+            let fh_meta = fh.metadata()?;
+            let fh_data =
+                readfilez::read_part_from_file(&mut fh, 0, readfilez::LengthSpec::new(None, true))?;
+            std::io::Result::<_>::Ok((i, fh_meta, fh_data))
+        })
+        .filter_map(ghandle_res2ok("file open"))
+    {
+        let stin = i
+            .strip_prefix(indir)
+            .expect("unable to strip path prefix")
+            .with_extension("html");
+        let outfilp = outdir.join(&stin);
+        if let Some(x) = outfilp.parent() {
+            if !crds.contains(x) {
+                std::fs::create_dir_all(x).expect("unable to create destination directory");
+                crds.insert(x.to_path_buf());
+            }
+        }
+        let stin = stin.to_str().expect("got invalid file name");
+        let mut do_build = true;
+        if !force_rebuild {
+            if let Some(config_mtime) = config_mtime {
+                if let Ok(dst_meta) = std::fs::metadata(&outfilp) {
+                    if let Ok(src_mtime) = fh_meta.modified() {
+                        if let Ok(dst_mtime) = dst_meta.modified() {
+                            if dst_mtime.duration_since(config_mtime).is_ok()
+                                && dst_mtime.duration_since(src_mtime).is_ok()
+                            {
+                                // (config_mtime <= dst_mtime) && (src_mtime <= dst_mtime)
+                                // source file, config, etc. wasn't modified since destination file was generated
+                                do_build = false;
+                            }
+                        }
+                    }
                 }
             }
-            ents.push(ent_str);
-            let fpap = Path::new(fpath);
-            if let Some(x) = fpap
-                .parent()
-                .and_then(|x| if x == null_path { None } else { Some(x) })
-            {
-                let bname = fpap.file_name().unwrap();
-                subents
-                    .entry(x.to_path_buf())
-                    .or_default()
-                    .push(fmt_article_link(
-                        &rd,
-                        if lnk == fpath {
-                            bname.to_str().unwrap()
-                        } else {
-                            lnk
-                        },
-                    ));
+        }
+        println!(
+            "- {}{}",
+            stin,
+            if do_build { "" } else { " [build skipped]" }
+        );
+        let fh_data: &str = std::str::from_utf8(&*fh_data).expect("file doesn't contain UTF-8");
+        let fh_data_spl = fh_data.find("\n---\n").expect("unable to get file header");
+        let mut rd: Post =
+            serde_yaml::from_str(&fh_data[..=fh_data_spl]).expect("unable to decode file as YAML");
+        let content = &fh_data[fh_data_spl + 5..];
+
+        let lnk: &str = match &rd.typ {
+            PostTyp::Link => content.trim(),
+            PostTyp::Text if do_build => {
+                let fhout = std::fs::File::create(&outfilp).expect("unable to open output file");
+                let wr = std::io::BufWriter::new(fhout);
+                if let Err(x) =
+                    write_article_page(&mangler, &config, stin.as_ref(), wr, &rd, &content)
+                {
+                    std::fs::remove_file(&outfilp).expect("unable to remove corrupted output file");
+                    panic!(
+                        "got error from write_article_page (src = {}, dst = {}): {:?}",
+                        stin,
+                        outfilp.display(),
+                        x
+                    );
+                }
+                stin
             }
-            Ok(ret)
-        },
-    )
-    .expect("I/O error while transforming dirs");
+            PostTyp::Text => stin,
+        };
+        let ent_str = fmt_article_link(&rd, lnk);
+        for i in std::mem::take(&mut rd.tags) {
+            if is_valid_tag(&i) {
+                tagents.entry(i).or_default().push(ent_str.clone());
+            } else {
+                eprintln!("   - got invalid tag: {}", i);
+            }
+        }
+        ents.push(ent_str);
+        let fpap = Path::new(stin);
+        if let Some(x) = fpap
+            .parent()
+            .and_then(|x| if x == null_path { None } else { Some(x) })
+        {
+            let bname = fpap.file_name().unwrap();
+            subents
+                .entry(x.to_path_buf())
+                .or_default()
+                .push(fmt_article_link(
+                    &rd,
+                    if lnk == stin {
+                        bname.to_str().unwrap()
+                    } else {
+                        lnk
+                    },
+                ));
+        }
+    }
 
     let mut kv: Vec<std::path::PathBuf> = subents
         .keys()
@@ -212,14 +275,13 @@ fn main() {
         ));
     }
 
-    write_index(&config, outdir.as_ref(), "".as_ref(), &ents).expect("unable to write main-index");
+    write_index(&config, outdir, "".as_ref(), &ents).expect("unable to write main-index");
 
     for (subdir, p_ents) in subents.iter() {
-        write_index(&config, outdir.as_ref(), subdir.as_ref(), &p_ents)
-            .expect("unable to write sub-index");
+        write_index(&config, outdir, subdir.as_ref(), &p_ents).expect("unable to write sub-index");
     }
 
     for (tag, p_ents) in tagents.iter() {
-        write_tag_index(&config, outdir.as_ref(), tag, &p_ents).expect("unable to write tag-index");
+        write_tag_index(&config, outdir, tag, &p_ents).expect("unable to write tag-index");
     }
 }

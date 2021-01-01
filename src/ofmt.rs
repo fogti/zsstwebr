@@ -57,6 +57,7 @@ pub fn write_article_page<W: Write>(
         writeln!(&mut wr, "    <p>Autor: {}</p>", rd.author)?;
     }
     writeln!(&mut wr, "  </body>\n</html>")?;
+    wr.flush()?;
     Ok(())
 }
 
