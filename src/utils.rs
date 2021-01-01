@@ -1,3 +1,6 @@
+use std::path::Path;
+use walkdir::DirEntry;
+
 pub fn ghandle_res2ok<T, E>(nam: &'static str) -> impl Fn(Result<T, E>) -> Option<T>
 where
     E: std::error::Error,
@@ -11,7 +14,7 @@ where
     }
 }
 
-pub fn back_to_idx<P: AsRef<std::path::Path>>(p: P) -> String {
+pub fn back_to_idx<P: AsRef<Path>>(p: P) -> String {
     let ccnt = p.as_ref().components().count() - 1;
     let mut ret = String::with_capacity(ccnt * 3 + 10);
     for _ in 0..ccnt {
@@ -38,4 +41,13 @@ pub fn fmt_article_link(rd: &crate::Post, lnk: &str) -> String {
         ent_str += "</span>";
     }
     ent_str
+}
+
+pub fn is_not_hidden(entry: &DirEntry) -> bool {
+    entry.depth() == 0
+        || entry
+            .file_name()
+            .to_str()
+            .map(|s| !s.starts_with('.'))
+            .unwrap_or(false)
 }

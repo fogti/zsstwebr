@@ -142,11 +142,12 @@ fn main() {
     let indir = Path::new(indir);
     let outdir = Path::new(outdir);
 
-    for (i, fh_meta, fh_data) in glob::glob(indir.join("**/*.yaml").to_str().unwrap())
-        .expect("invalid source path")
-        .filter_map(ghandle_res2ok("glob"))
+    for (dirent, fh_meta, fh_data) in walkdir::WalkDir::new(indir)
+        .into_iter()
+        .filter_entry(|e| is_not_hidden(e)) // skip directories like .git
+        .filter_map(ghandle_res2ok("walkdir"))
         .map(|i| {
-            let mut fh = File::open(&i)?;
+            let mut fh = File::open(i.path())?;
             let fh_meta = fh.metadata()?;
             let fh_data =
                 readfilez::read_part_from_file(&mut fh, 0, readfilez::LengthSpec::new(None, true))?;
@@ -154,7 +155,8 @@ fn main() {
         })
         .filter_map(ghandle_res2ok("file open"))
     {
-        let stin = i
+        let stin = dirent
+            .path()
             .strip_prefix(indir)
             .expect("unable to strip path prefix")
             .with_extension("html");
