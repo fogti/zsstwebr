@@ -2,7 +2,7 @@ mod mangle;
 mod ofmt;
 mod utils;
 
-use chrono::prelude::*;
+use chrono::naive::NaiveDate;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::{fs::File, path::Path};
