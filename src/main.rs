@@ -189,29 +189,7 @@ fn main() {
             }
         }
         let stin = stin.to_str().expect("got invalid file name");
-        let mut do_build = true;
-        if !force_rebuild {
-            if let Some(config_mtime) = config_mtime {
-                if let Ok(dst_meta) = std::fs::metadata(&outfilp) {
-                    if let Ok(src_mtime) = fh_meta.modified() {
-                        if let Ok(dst_mtime) = dst_meta.modified() {
-                            if dst_mtime.duration_since(config_mtime).is_ok()
-                                && dst_mtime.duration_since(src_mtime).is_ok()
-                            {
-                                // (config_mtime <= dst_mtime) && (src_mtime <= dst_mtime)
-                                // source file, config, etc. wasn't modified since destination file was generated
-                                do_build = false;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        println!(
-            "- {}{}",
-            stin,
-            if do_build { "" } else { " [build skipped]" }
-        );
+        print!("- {}", stin);
         let fh_data: &str = std::str::from_utf8(&*fh_data).expect("file doesn't contain UTF-8");
         let fh_data_spl = fh_data.find("\n---\n").expect("unable to get file header");
         let mut rd: Post =
@@ -220,24 +198,47 @@ fn main() {
 
         let lnk: &str = match &rd.typ {
             PostTyp::Link => content.trim(),
-            PostTyp::Text if do_build => {
-                let fhout = std::fs::File::create(&outfilp).expect("unable to open output file");
-                let wr = std::io::BufWriter::new(fhout);
-                if let Err(x) =
-                    write_article_page(&mangler, &config, stin.as_ref(), wr, &rd, &content)
-                {
-                    std::fs::remove_file(&outfilp).expect("unable to remove corrupted output file");
-                    panic!(
-                        "got error from write_article_page (src = {}, dst = {}): {:?}",
-                        stin,
-                        outfilp.display(),
-                        x
-                    );
+            PostTyp::Text => {
+                let mut do_build = true;
+                if !force_rebuild {
+                    if let Some(config_mtime) = config_mtime {
+                        if let Ok(dst_meta) = std::fs::metadata(&outfilp) {
+                            if let Ok(src_mtime) = fh_meta.modified() {
+                                if let Ok(dst_mtime) = dst_meta.modified() {
+                                    if dst_mtime.duration_since(config_mtime).is_ok()
+                                        && dst_mtime.duration_since(src_mtime).is_ok()
+                                    {
+                                        // (config_mtime <= dst_mtime) && (src_mtime <= dst_mtime)
+                                        // source file, config, etc. wasn't modified since destination file was generated
+                                        print!(" [rebuild skipped]");
+                                        do_build = false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if do_build {
+                    let fhout =
+                        std::fs::File::create(&outfilp).expect("unable to open output file");
+                    let wr = std::io::BufWriter::new(fhout);
+                    if let Err(x) =
+                        write_article_page(&mangler, &config, stin.as_ref(), wr, &rd, &content)
+                    {
+                        std::fs::remove_file(&outfilp)
+                            .expect("unable to remove corrupted output file");
+                        panic!(
+                            "got error from write_article_page (src = {}, dst = {}): {:?}",
+                            stin,
+                            outfilp.display(),
+                            x
+                        );
+                    }
                 }
                 stin
             }
-            PostTyp::Text => stin,
         };
+        println!();
         let ent_str = fmt_article_link(&rd, lnk);
         for i in std::mem::take(&mut rd.tags) {
             if is_valid_tag(&i) {
