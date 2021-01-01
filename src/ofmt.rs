@@ -1,7 +1,9 @@
 use crate::utils::back_to_idx;
-use crate::{mangle::Mangler, Config, Post};
+use crate::{mangle::Mangler, Config, Index, IndexTyp, Post};
 use std::io::{Result, Write};
 use std::path::Path;
+
+const OIDXREFS_LINE_MAXLEN: usize = 200;
 
 pub fn write_article_page<W: Write>(
     mangler: &Mangler,
@@ -65,21 +67,29 @@ pub fn write_index(
     config: &Config,
     outdir: &Path,
     idx_name: &Path,
-    ents: &[String],
+    mut data: Index,
 ) -> std::io::Result<()> {
     println!("- index: {}", idx_name.display());
 
-    let mut f = std::io::BufWriter::new(std::fs::File::create(
-        Path::new(outdir).join(idx_name).join("index.html"),
-    )?);
-
-    let is_main_idx = idx_name.to_str().map(|i| i.is_empty()) == Some(true);
-
-    let (it_pre, it_post) = if is_main_idx {
-        ("", "")
-    } else {
-        ("Ordner: ", " &mdash; ")
+    let mut fpath = Path::new(outdir).join(idx_name);
+    let (it_pre, up) = match data.typ {
+        IndexTyp::Directory => {
+            fpath = fpath.join("index.html");
+            if idx_name.to_str().map(|i| i.is_empty()).unwrap_or(false) {
+                ("", "")
+            } else {
+                ("Ordner: ", "<a href=\"..\">[Übergeordneter Ordner]</a>")
+            }
+        }
+        IndexTyp::Tag => {
+            fpath.set_extension("html");
+            ("Tag: ", "<a href=\"index.html\">[Hauptseite]</a>")
+        }
     };
+    let it_post = if it_pre.is_empty() { "" } else { " &mdash; " };
+
+    let mut f = std::io::BufWriter::new(std::fs::File::create(fpath)?);
+    let idx_name_s = idx_name.to_str().unwrap();
 
     write!(
         &mut f,
@@ -98,77 +108,60 @@ pub fn write_index(
 "#,
         &config.stylesheet,
         it_pre,
-        idx_name.to_str().unwrap(),
+        idx_name_s,
         it_post,
         &config.blog_name,
         &config.x_head,
         it_pre,
-        idx_name.to_str().unwrap(),
+        idx_name_s,
         it_post,
         &config.blog_name,
         &config.x_body_ph1,
     )?;
 
-    if !is_main_idx {
-        writeln!(
+    if !up.is_empty() {
+        writeln!(&mut f, "{}<br />", up)?;
+    }
+
+    data.oidxrefs.sort_unstable();
+
+    let mut refline = String::new();
+
+    for i in data.oidxrefs.iter().rev() {
+        let cur = format!("<a href=\"{}.html\">{}</a>", i.replace('&', "&amp;"), i);
+        if refline.is_empty() {
+            refline = cur;
+        } else if (refline.len() + cur.len() + 3) <= OIDXREFS_LINE_MAXLEN {
+            refline += " - ";
+            refline += &cur;
+        } else {
+            writeln!(&mut f, "{}<br />", refline)?;
+            refline = cur;
+        }
+    }
+    if !refline.is_empty() {
+        writeln!(&mut f, "{}<br />", refline)?;
+        std::mem::drop(refline);
+    }
+
+    data.ents.sort_unstable();
+
+    for i in data.ents.iter().rev() {
+        write!(
             &mut f,
-            "<a href=\"..\">[&Uuml;bergeordneter Ordner]</a><br />"
+            "{}: <a href=\"{}\">{}</a>",
+            i.cdate.format("%d.%m.%Y"),
+            i.href,
+            i.title
         )?;
-    }
-
-    for i in ents.iter().rev() {
-        writeln!(&mut f, "{}<br />", i)?;
-    }
-
-    writeln!(&mut f, "</tt>\n  </body>\n</html>")?;
-
-    f.flush()?;
-    f.into_inner()?.sync_all()?;
-    Ok(())
-}
-
-pub fn write_tag_index(
-    config: &Config,
-    outdir: &Path,
-    idx_name: &str,
-    ents: &[String],
-) -> std::io::Result<()> {
-    println!("- tag index: {}", &idx_name);
-
-    let mut fpath = Path::new(outdir).join(idx_name);
-    fpath.set_extension("html");
-    let mut f = std::io::BufWriter::new(std::fs::File::create(fpath)?);
-
-    write!(
-        &mut f,
-        r#"<!doctype html>
-<html lang="de" dir="ltr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{}" type="text/css" />
-    <title>Tag: {} &mdash; {}</title>
-{}  </head>
-  <body>
-    <h1>Tag: {} &mdash; {}</h1>
-{}
-<tt>
-<a href="index.html">[Hauptseite]</a><br />
-"#,
-        &config.stylesheet,
-        &idx_name,
-        &config.blog_name,
-        &config.x_head,
-        &idx_name,
-        &config.blog_name,
-        &config.x_body_ph1,
-    )?;
-
-    for i in ents.iter().rev() {
-        writeln!(&mut f, "{}<br />", i)?;
+        if !i.author.is_empty() {
+            write!(&mut f, " <span class=\"authorspec\">by {}</span>", i.author)?;
+        }
+        writeln!(&mut f, "<br />")?;
     }
 
     writeln!(&mut f, "</tt>\n  </body>\n</html>")?;
+
     f.flush()?;
     f.into_inner()?.sync_all()?;
     Ok(())

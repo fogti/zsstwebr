@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::{fs::File, path::Path};
 
-use crate::ofmt::{write_article_page, write_index, write_tag_index};
+use crate::ofmt::{write_article_page, write_index};
 use crate::utils::*;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -22,7 +22,7 @@ pub struct Config {
     pub x_body_ph1: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PostTyp {
     Link,
@@ -42,6 +42,47 @@ pub struct Post {
     #[serde(default)]
     pub x_nav: String,
     pub typ: PostTyp,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum IndexTyp {
+    Directory,
+    Tag,
+}
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct IndexEntry {
+    pub cdate: NaiveDate,
+    pub href: String,
+    pub title: String,
+    pub author: String,
+}
+
+impl IndexEntry {
+    fn with_post_and_link(post: &Post, lnk: &str) -> Self {
+        Self {
+            cdate: post.cdate,
+            href: lnk.to_string(),
+            title: post.title.clone(),
+            author: post.author.clone(),
+        }
+    }
+}
+
+pub struct Index {
+    pub typ: IndexTyp,
+    pub oidxrefs: Vec<String>,
+    pub ents: Vec<IndexEntry>,
+}
+
+impl Default for Index {
+    fn default() -> Self {
+        Self {
+            typ: IndexTyp::Directory,
+            oidxrefs: Vec::new(),
+            ents: Vec::new(),
+        }
+    }
 }
 
 fn main() {
@@ -133,9 +174,13 @@ fn main() {
         )
     };
 
-    let mut ents = Vec::new();
+    let mut mainidx = Index {
+        typ: IndexTyp::Directory,
+        oidxrefs: Vec::new(),
+        ents: Vec::new(),
+    };
     let mut tagents = HashMap::<_, Vec<_>>::new();
-    let mut subents = HashMap::<_, Vec<_>>::new();
+    let mut subents = HashMap::<_, Index>::new();
 
     let force_rebuild = matches.is_present("force-rebuild");
     let mut crds = HashSet::new();
@@ -239,38 +284,34 @@ fn main() {
             }
         };
         println!();
-        let ent_str = fmt_article_link(&rd, lnk);
+        let idxent = IndexEntry::with_post_and_link(&rd, lnk);
         for i in std::mem::take(&mut rd.tags) {
             if is_valid_tag(&i) {
-                tagents.entry(i).or_default().push(ent_str.clone());
+                tagents.entry(i).or_default().push(idxent.clone());
             } else {
                 eprintln!("   - got invalid tag: {}", i);
             }
         }
-        ents.push((rd.cdate, ent_str));
+        mainidx.ents.push(idxent);
         let fpap = Path::new(stin);
         if let Some(x) = fpap
             .parent()
             .and_then(|x| if x == null_path { None } else { Some(x) })
         {
-            let bname = fpap.file_name().unwrap();
             subents
                 .entry(x.to_path_buf())
                 .or_default()
-                .push(fmt_article_link(
+                .ents
+                .push(IndexEntry::with_post_and_link(
                     &rd,
                     if lnk == stin {
-                        bname.to_str().unwrap()
+                        fpap.file_name().unwrap().to_str().unwrap()
                     } else {
                         lnk
                     },
                 ));
         }
     }
-
-    ents.sort_unstable_by(|a, b| a.0.cmp(&b.0));
-
-    let mut ents = ents.into_iter().map(|(_, i)| i).collect();
 
     let mut kv: Vec<std::path::PathBuf> = subents
         .keys()
@@ -284,40 +325,36 @@ fn main() {
         if i == null_path {
             continue;
         }
-        let ibn = i.file_name().unwrap().to_str().unwrap();
         match i.parent() {
-            None => &mut ents,
-            Some(par) if par == null_path => &mut ents,
+            None => &mut mainidx,
+            Some(par) if par == null_path => &mut mainidx,
             Some(par) => subents.entry(par.to_path_buf()).or_default(),
         }
-        .push(format!("<a href=\"{}/index.html\">{}</a>", ibn, ibn));
+        .oidxrefs
+        .push(i.file_name().unwrap().to_str().unwrap().to_string());
     }
 
-    let mut tags: Vec<_> = tagents.keys().collect();
-    tags.sort_unstable_by(|a, b| a.cmp(b).reverse());
-    let mut tagline = String::new();
-    for tag in tags.into_iter() {
-        let cur = format!("<a href=\"{}.html\">{}</a>", tag.replace('&', "&amp;"), tag);
-        if tagline.is_empty() {
-            tagline = cur;
-        } else if (tagline.len() + cur.len()) <= 100 {
-            tagline += " - ";
-            tagline += &cur;
-        } else {
-            ents.push(std::mem::replace(&mut tagline, cur));
-        }
-    }
-    if !tagline.is_empty() {
-        ents.push(tagline);
+    mainidx
+        .oidxrefs
+        .extend(tagents.keys().map(|i| i.to_string()));
+
+    write_index(&config, outdir, "".as_ref(), mainidx).expect("unable to write main-index");
+
+    for (subdir, p_ents) in subents.into_iter() {
+        write_index(&config, outdir, subdir.as_ref(), p_ents).expect("unable to write sub-index");
     }
 
-    write_index(&config, outdir, "".as_ref(), &ents).expect("unable to write main-index");
-
-    for (subdir, p_ents) in subents.iter() {
-        write_index(&config, outdir, subdir.as_ref(), &p_ents).expect("unable to write sub-index");
-    }
-
-    for (tag, p_ents) in tagents.iter() {
-        write_tag_index(&config, outdir, tag, &p_ents).expect("unable to write tag-index");
+    for (tag, p_ents) in tagents.into_iter() {
+        write_index(
+            &config,
+            outdir,
+            tag.as_ref(),
+            Index {
+                typ: IndexTyp::Tag,
+                oidxrefs: Vec::new(),
+                ents: p_ents,
+            },
+        )
+        .expect("unable to write tag-index");
     }
 }

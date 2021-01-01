@@ -15,21 +15,6 @@ pub fn is_valid_tag(tag: &str) -> bool {
     !(tag.is_empty() || tag.contains(|i| matches!(i, '.' | '/' | '\0')))
 }
 
-pub fn fmt_article_link(rd: &crate::Post, lnk: &str) -> String {
-    let mut ent_str = format!(
-        "{}: <a href=\"{}\">{}</a>",
-        rd.cdate.format("%d.%m.%Y"),
-        lnk,
-        rd.title
-    );
-    if !rd.author.is_empty() {
-        ent_str += " <span class=\"authorspec\">by ";
-        ent_str += &rd.author;
-        ent_str += "</span>";
-    }
-    ent_str
-}
-
 pub fn is_not_hidden(entry: &DirEntry) -> bool {
     entry.depth() == 0
         || entry
