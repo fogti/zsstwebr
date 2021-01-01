@@ -84,11 +84,11 @@ impl Default for Index {
     }
 }
 
-pub fn back_to_idx<P: AsRef<Path>>(p: P) -> String {
+pub fn back_to_idx(p: &Path) -> String {
     use std::iter::{once, repeat};
     repeat("../")
-        .take(p.as_ref().components().count() - 1)
-        .chain(once("index"))
+        .take(p.components().count() - 1)
+        .chain(once("index.html"))
         .flat_map(|i| i.chars())
         .collect()
 }
