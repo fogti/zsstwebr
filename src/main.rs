@@ -247,7 +247,7 @@ fn main() {
                 eprintln!("   - got invalid tag: {}", i);
             }
         }
-        ents.push(ent_str);
+        ents.push((rd.cdate, ent_str));
         let fpap = Path::new(stin);
         if let Some(x) = fpap
             .parent()
@@ -268,7 +268,9 @@ fn main() {
         }
     }
 
-    ents.sort_unstable_by(|a, b| a.cmp(b).reverse());
+    ents.sort_unstable_by(|a, b| a.0.cmp(&b.0).reverse());
+
+    let mut ents = ents.into_iter().map(|(_, i)| i).collect();
 
     let mut kv: Vec<std::path::PathBuf> = subents
         .keys()
