@@ -193,7 +193,7 @@ pub fn write_feed(
     assert_eq!(data.typ, IndexTyp::Directory);
     println!("- atom feed");
 
-    let fpath = Path::new(outdir).join("feed.atom");
+    let fpath = outdir.join("feed.atom");
     let mut f = std::io::BufWriter::new(std::fs::File::create(fpath)?);
     writeln!(&mut f, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\">")?;
     writeln!(&mut f, "  <author><name>{}</name></author>", config.author)?;
@@ -210,7 +210,7 @@ pub fn write_feed(
             i.cdate.format(CDATEFMTS).to_string()
         } else {
             // relative link, use mtime, or use cdate as fallback
-            match std::fs::metadata(&i.href) {
+            match std::fs::metadata(outdir.join(&i.href)) {
                 Ok(x) => {
                     crate::utils::system_time_to_date_time(x.modified()?).to_rfc3339_opts(SecondsFormat::Secs, true)
                 }
