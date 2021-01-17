@@ -203,7 +203,7 @@ pub fn write_feed(
 
     for i in data.ents.iter().rev() {
         writeln!(&mut f, "  <entry>")?;
-        writeln!(&mut f, "    <title type=\"xhtml\" xml:base=\"http://www.w3.org/1999/xhtml\" xmlns=\"http://www.w3.org/1999/xhtml\">{}</title>", i.title)?;
+        writeln!(&mut f, "    <title type=\"html\"><![CDATA[ {} ]]></title>", i.title)?;
         writeln!(&mut f, "    <link href=\"{}\" />", i.href)?;
         let updts = if i.href.starts_with('/') || i.href.contains("://") {
             // absolute link, use cdate as update timestamp
