@@ -226,6 +226,7 @@ pub fn write_feed(
         }
         writeln!(&mut f, "  </entry>")?;
     }
+    writeln!(&mut f, "</feed>")?;
 
     f.flush()?;
     f.into_inner()?.sync_all()?;
