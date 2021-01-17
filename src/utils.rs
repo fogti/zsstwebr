@@ -112,6 +112,10 @@ pub fn back_to_idx(p: &Path) -> String {
         .collect()
 }
 
+pub fn needs_html_escape(text: &str) -> bool {
+    text.contains(|i| matches!(i, '<' | '>' | '&'))
+}
+
 pub fn is_valid_tag(tag: &str) -> bool {
     !(tag.is_empty() || tag.contains(|i| matches!(i, '.' | '/' | '\0')))
 }
@@ -129,7 +133,8 @@ pub fn is_not_hidden(entry: &DirEntry) -> bool {
 pub fn system_time_to_date_time(t: SystemTime) -> DateTime<Utc> {
     let (sec, nsec) = match t.duration_since(SystemTime::UNIX_EPOCH) {
         Ok(dur) => (dur.as_secs() as i64, dur.subsec_nanos()),
-        Err(e) => { // unlikely but should be handled
+        Err(e) => {
+            // unlikely but should be handled
             let dur = e.duration();
             let (sec, nsec) = (dur.as_secs() as i64, dur.subsec_nanos());
             if nsec == 0 {
@@ -137,7 +142,7 @@ pub fn system_time_to_date_time(t: SystemTime) -> DateTime<Utc> {
             } else {
                 (-sec - 1, 1_000_000_000 - nsec)
             }
-        },
+        }
     };
     use chrono::TimeZone;
     Utc.timestamp(sec, nsec)
