@@ -2,7 +2,7 @@ mod mangle;
 mod ofmt;
 mod utils;
 
-use crate::ofmt::{write_article_page, write_index};
+use crate::ofmt::{write_article_page, write_feed, write_index};
 use crate::utils::*;
 use std::collections::{HashMap, HashSet};
 use std::{fs::File, path::Path};
@@ -279,18 +279,23 @@ fn main() {
         typ: IndexTyp::Tag,
     }));
 
-    write_index(&config, outdir, "".as_ref(), mainidx).expect("unable to write main-index");
+    mainidx.prepare();
 
-    for (subdir, p_ents) in subents.into_iter() {
-        write_index(&config, outdir, subdir.as_ref(), p_ents).expect("unable to write sub-index");
+    write_index(&config, outdir, "".as_ref(), &mainidx).expect("unable to write main-index");
+    write_feed(&config, outdir, &mainidx).expect("unable to write atom feed");
+
+    for (subdir, mut p_ents) in subents.into_iter() {
+        p_ents.prepare();
+        write_index(&config, outdir, subdir.as_ref(), &p_ents).expect("unable to write sub-index");
     }
 
-    for (tag, p_ents) in tagents.into_iter() {
+    for (tag, mut p_ents) in tagents.into_iter() {
+        p_ents.sort_unstable();
         write_index(
             &config,
             outdir,
             tag.as_ref(),
-            Index {
+            &Index {
                 typ: IndexTyp::Tag,
                 oidxrefs: Vec::new(),
                 ents: p_ents,

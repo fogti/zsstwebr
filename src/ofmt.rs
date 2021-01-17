@@ -67,7 +67,7 @@ pub fn write_index(
     config: &Config,
     outdir: &Path,
     idx_name: &Path,
-    mut data: Index,
+    data: &Index,
 ) -> std::io::Result<()> {
     println!("- index: {}", idx_name.display());
 
@@ -99,6 +99,7 @@ pub fn write_index(
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="{}" type="text/css" />
+{}
     <title>{}{}{}{}</title>
 {}  </head>
   <body>
@@ -107,6 +108,10 @@ pub fn write_index(
 <tt>
 "#,
         &config.stylesheet,
+        if it_pre.is_empty() {
+r#"    <link rel="alternate" type="application/atom+xml" title="Atom feed" href="feed.atom" />
+"#
+        } else { "" },
         it_pre,
         idx_name_s,
         it_post,
@@ -122,8 +127,6 @@ pub fn write_index(
     if !up.is_empty() {
         writeln!(&mut f, "{}<br />", up)?;
     }
-
-    data.oidxrefs.sort_unstable();
 
     let mut refline = String::new();
     let mut refline_len = 0;
@@ -156,8 +159,6 @@ pub fn write_index(
         std::mem::drop(refline);
     }
 
-    data.ents.sort_unstable();
-
     for i in data.ents.iter().rev() {
         write!(
             &mut f,
@@ -173,6 +174,58 @@ pub fn write_index(
     }
 
     writeln!(&mut f, "</tt>\n  </body>\n</html>")?;
+
+    f.flush()?;
+    f.into_inner()?.sync_all()?;
+    Ok(())
+}
+
+pub fn write_feed(
+    config: &Config,
+    outdir: &Path,
+    data: &Index,
+) -> std::io::Result<()> {
+    use chrono::{DateTime, Utc, SecondsFormat};
+
+    const CDATEFMTS: &str = "%Y-%m-%dT00:00:00Z";
+    let now: DateTime<Utc> = Utc::now();
+
+    assert_eq!(data.typ, IndexTyp::Directory);
+    println!("- atom feed");
+
+    let fpath = Path::new(outdir).join("feed.atom");
+    let mut f = std::io::BufWriter::new(std::fs::File::create(fpath)?);
+    writeln!(&mut f, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\">")?;
+    writeln!(&mut f, "  <author><name>{}</name></author>", config.author)?;
+    writeln!(&mut f, "  <title>{}</title>", config.blog_name)?;
+    writeln!(&mut f, "  <id>{}</id>", config.id)?;
+    writeln!(&mut f, "  <updated>{}</updated>", now.to_rfc3339_opts(SecondsFormat::Secs, true))?;
+
+    for i in data.ents.iter().rev() {
+        writeln!(&mut f, "  <entry>")?;
+        writeln!(&mut f, "    <title type=\"xhtml\" xml:base=\"http://www.w3.org/1999/xhtml\" xmlns=\"http://www.w3.org/1999/xhtml\">{}</title>", i.title)?;
+        writeln!(&mut f, "    <link href=\"{}\" />", i.href)?;
+        let updts = if i.href.starts_with('/') || i.href.contains("://") {
+            // absolute link, use cdate as update timestamp
+            i.cdate.format(CDATEFMTS).to_string()
+        } else {
+            // relative link, use mtime, or use cdate as fallback
+            match std::fs::metadata(&i.href) {
+                Ok(x) => {
+                    crate::utils::system_time_to_date_time(x.modified()?).to_rfc3339_opts(SecondsFormat::Secs, true)
+                }
+                Err(e) => {
+                    eprintln!("  warning: unable to get mtime of: {}, error = {}", i.href, e);
+                    i.cdate.format(CDATEFMTS).to_string()
+                }
+            }
+        };
+        writeln!(&mut f, "    <updated>{}</updated>", updts)?;
+        for a in &i.authors {
+            writeln!(&mut f, "    <author><name>{}</name></author>", a)?;
+        }
+        writeln!(&mut f, "  </entry>")?;
+    }
 
     f.flush()?;
     f.into_inner()?.sync_all()?;

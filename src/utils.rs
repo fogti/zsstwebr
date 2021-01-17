@@ -1,11 +1,13 @@
-use chrono::naive::NaiveDate;
+use chrono::{naive::NaiveDate, DateTime, Utc};
 use serde::Deserialize;
-use std::path::Path;
+use std::{path::Path, time::SystemTime};
 use walkdir::DirEntry;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     pub blog_name: String,
+    pub id: String,
+    pub author: String,
     pub stylesheet: String,
     #[serde(default)]
     pub x_head: String,
@@ -26,8 +28,14 @@ pub enum PostTyp {
 pub struct Post {
     pub cdate: NaiveDate,
     pub title: String,
+
+    // used for index page
     #[serde(default)]
     pub author: String,
+
+    // used for Atom feed
+    #[serde(default)]
+    pub authors: Vec<String>,
     #[serde(default)]
     pub tags: Vec<String>,
     #[serde(default)]
@@ -48,7 +56,10 @@ pub struct IndexEntry {
     pub cdate: NaiveDate,
     pub href: String,
     pub title: String,
+    // used for index page
     pub author: String,
+    // used for Atom feed
+    pub authors: Vec<String>,
 }
 
 impl IndexEntry {
@@ -58,6 +69,7 @@ impl IndexEntry {
             href: lnk.to_string(),
             title: post.title.clone(),
             author: post.author.clone(),
+            authors: post.authors.clone(),
         }
     }
 }
@@ -84,6 +96,13 @@ impl Default for Index {
     }
 }
 
+impl Index {
+    pub fn prepare(&mut self) {
+        self.oidxrefs.sort_unstable();
+        self.ents.sort_unstable();
+    }
+}
+
 pub fn back_to_idx(p: &Path) -> String {
     use std::iter::{once, repeat};
     repeat("../")
@@ -104,4 +123,22 @@ pub fn is_not_hidden(entry: &DirEntry) -> bool {
             .to_str()
             .map(|s| !s.starts_with('.'))
             .unwrap_or(false)
+}
+
+// source: https://users.rust-lang.org/t/convert-std-time-systemtime-to-chrono-datetime-datetime/7684/4
+pub fn system_time_to_date_time(t: SystemTime) -> DateTime<Utc> {
+    let (sec, nsec) = match t.duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(dur) => (dur.as_secs() as i64, dur.subsec_nanos()),
+        Err(e) => { // unlikely but should be handled
+            let dur = e.duration();
+            let (sec, nsec) = (dur.as_secs() as i64, dur.subsec_nanos());
+            if nsec == 0 {
+                (-sec, 0)
+            } else {
+                (-sec - 1, 1_000_000_000 - nsec)
+            }
+        },
+    };
+    use chrono::TimeZone;
+    Utc.timestamp(sec, nsec)
 }
