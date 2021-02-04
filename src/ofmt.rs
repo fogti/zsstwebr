@@ -222,6 +222,7 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
         .ents
         .iter()
         .rev()
+        .take(20)
         .map(|i| {
             let mut e = Entry::default();
             e.title = if crate::utils::needs_html_escape(&i.title) {
