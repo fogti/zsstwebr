@@ -6,6 +6,7 @@ use walkdir::DirEntry;
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     pub blog_name: String,
+    pub web_root_url: String,
     pub id: String,
     pub author: String,
     pub stylesheet: String,

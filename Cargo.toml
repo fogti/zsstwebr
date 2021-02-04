@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 aho-corasick = "0.7"
+atom_syndication = "0.9"
 clap = "2.33"
 chrono = { version = "0.4", features = ["serde"] }
 readfilez = "0.2"

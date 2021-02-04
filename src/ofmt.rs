@@ -183,63 +183,108 @@ pub fn write_index(
 }
 
 pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Result<()> {
-    use chrono::{DateTime, SecondsFormat, Utc};
-
-    const CDATEFMTS: &str = "%Y-%m-%dT00:00:00Z";
-    let now: DateTime<Utc> = Utc::now();
+    use atom_syndication::{Entry, Link, Person};
+    use chrono::{DateTime, Utc};
 
     assert_eq!(data.typ, IndexTyp::Directory);
     println!("- atom feed");
 
+    let now: DateTime<Utc> = Utc::now();
+    let nult = chrono::NaiveTime::from_hms(0, 0, 0);
+
+    let mut feed = atom_syndication::Feed::default();
+    feed.authors = vec![{
+        let mut p = Person::default();
+        p.set_name(&config.author);
+        p
+    }];
+
+    feed.links = vec![
+        {
+            let mut l = Link::default();
+            l.href = config.id.clone();
+            l.set_rel("alternate");
+            l
+        },
+        {
+            let mut l = Link::default();
+            l.href = format!("{}/feed.atom", config.id);
+            l.set_rel("self");
+            l
+        },
+    ];
+
+    feed.title = config.blog_name.clone();
+    feed.id = config.id.clone();
+    feed.set_updated(now);
+
+    feed.entries = data
+        .ents
+        .iter()
+        .rev()
+        .map(|i| {
+            let mut e = Entry::default();
+            e.title = if crate::utils::needs_html_escape(&i.title) {
+                format!("<![CDATA[ {} ]]>", i.title)
+            } else {
+                i.title.clone()
+            };
+            e.id = i.href.clone();
+            e.links = vec![{
+                let mut l = Link::default();
+                l.href = i.href.clone();
+                l.set_rel("alternate");
+                l
+            }];
+
+            let (url, updts) = if i.href.starts_with('/') || i.href.contains("://") {
+                // absolute link, use cdate as update timestamp
+                (
+                    if i.href.starts_with('/') {
+                        format!("{}{}", config.web_root_url, i.href)
+                    } else {
+                        i.href.clone()
+                    },
+                    DateTime::from_utc(i.cdate.clone().and_time(nult.clone()), Utc),
+                )
+            } else {
+                // relative link, use mtime, or use cdate as fallback
+                (
+                    format!("{}/{}", config.id, i.href),
+                    match std::fs::metadata(outdir.join(&i.href)) {
+                        Ok(x) => crate::utils::system_time_to_date_time(x.modified().unwrap()),
+                        Err(e) => {
+                            eprintln!(
+                                "  warning: unable to get mtime of: {}, error = {}",
+                                i.href, e
+                            );
+                            DateTime::from_utc(i.cdate.clone().and_time(nult.clone()), Utc)
+                        }
+                    },
+                )
+            };
+            e.id = url;
+            e.set_updated(updts);
+
+            e.authors = i
+                .authors
+                .iter()
+                .map(|a| Person {
+                    name: a.clone(),
+                    email: None,
+                    uri: None,
+                })
+                .collect();
+
+            e
+        })
+        .collect();
+
     let fpath = outdir.join("feed.atom");
-    let mut f = std::io::BufWriter::new(std::fs::File::create(fpath)?);
-    writeln!(
-        &mut f,
-        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\">"
-    )?;
-    writeln!(&mut f, "  <author><name>{}</name></author>", config.author)?;
-    writeln!(&mut f, "  <title>{}</title>", config.blog_name)?;
-    writeln!(&mut f, "  <id>{}</id>", config.id)?;
-    writeln!(
-        &mut f,
-        "  <updated>{}</updated>",
-        now.to_rfc3339_opts(SecondsFormat::Secs, true)
-    )?;
-
-    for i in data.ents.iter().rev() {
-        write!(&mut f, "  <entry>\n    <title type=")?;
-        if crate::utils::needs_html_escape(&i.title) {
-            write!(&mut f, "\"html\"><![CDATA[ {} ]]>", i.title)
-        } else {
-            write!(&mut f, "\"text\">{}", i.title)
-        }?;
-        writeln!(&mut f, "</title>\n    <link href=\"{}\" />", i.href)?;
-        let updts = if i.href.starts_with('/') || i.href.contains("://") {
-            // absolute link, use cdate as update timestamp
-            i.cdate.format(CDATEFMTS).to_string()
-        } else {
-            // relative link, use mtime, or use cdate as fallback
-            match std::fs::metadata(outdir.join(&i.href)) {
-                Ok(x) => crate::utils::system_time_to_date_time(x.modified()?)
-                    .to_rfc3339_opts(SecondsFormat::Secs, true),
-                Err(e) => {
-                    eprintln!(
-                        "  warning: unable to get mtime of: {}, error = {}",
-                        i.href, e
-                    );
-                    i.cdate.format(CDATEFMTS).to_string()
-                }
-            }
-        };
-        writeln!(&mut f, "    <updated>{}</updated>", updts)?;
-        for a in &i.authors {
-            writeln!(&mut f, "    <author><name>{}</name></author>", a)?;
-        }
-        writeln!(&mut f, "  </entry>")?;
-    }
-    writeln!(&mut f, "</feed>")?;
-
+    let f = std::io::BufWriter::new(std::fs::File::create(fpath)?);
+    let mut f = feed.write_to(f).expect("unable to serialize atom feed");
     f.flush()?;
     f.into_inner()?.sync_all()?;
+
     Ok(())
 }
