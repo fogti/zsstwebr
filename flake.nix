@@ -1,5 +1,5 @@
 {
-  description = "a rust implementation of the 'crulz' macro language interpreter";
+  description = "a web blog renderer";
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-20.09";
     yz-flake-utils.url = "github:YZITE/flake-utils";
@@ -13,6 +13,6 @@
     yz-flake-utils.lib.mkFlakeFromProg {
       prevpkgs = nixpkgs;
       progname = "zsstwebr";
-      drvBuilder = final: prev: (prev.pkgs.callPackage ./Cargo.nix {}).rootCrate.build;
+      drvBuilder = final: prev: (final.pkgs.callPackage ./Cargo.nix {}).rootCrate.build;
     };
 }
