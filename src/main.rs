@@ -161,6 +161,15 @@ fn main() {
         let fh_data_spl = fh_data.find("\n---\n").expect("unable to get file header");
         let mut rd: Post =
             serde_yaml::from_str(&fh_data[..=fh_data_spl]).expect("unable to decode file as YAML");
+        if let Some(x) = yz_diary_date::parse_from_path(&fpap) {
+            if x == rd.cdate {
+                print!(" (diary date OK )");
+            } else {
+                print!(" (diary date NEQ)");
+            }
+        } else {
+            print!(" (no diary date found)");
+        }
         let content = &fh_data[fh_data_spl + 5..];
 
         let fparent = fpap

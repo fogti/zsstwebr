@@ -14,3 +14,4 @@ readfilez = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 walkdir = "2.3.1"
+yz-diary-date = "0.1"
