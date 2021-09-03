@@ -161,16 +161,9 @@ fn main() {
         let fh_data_spl = fh_data.find("\n---\n").expect("unable to get file header");
         let mut rd: Post =
             serde_yaml::from_str(&fh_data[..=fh_data_spl]).expect("unable to decode file as YAML");
-        if let Some(x) = yz_diary_date::parse_from_path(&fpap) {
-            if x == rd.cdate {
-                print!(" (diary date OK )");
-            } else {
-                print!(" (diary date NEQ)");
-            }
-        } else {
-            print!(" (no diary date found)");
-        }
         let content = &fh_data[fh_data_spl + 5..];
+        let cdate =
+            yz_diary_date::parse_from_path(&fpap).expect("file name without parsable diary date");
 
         let fparent = fpap
             .parent()
@@ -234,7 +227,7 @@ fn main() {
             }
         };
         println!();
-        let idxent = IndexEntry::with_post_and_link(&rd, &lnk);
+        let idxent = IndexEntry::with_post_and_etc(&rd, cdate, &lnk);
         for i in std::mem::take(&mut rd.tags) {
             if is_valid_tag(&i) {
                 tagents.entry(i).or_default().push(idxent.clone());
@@ -248,8 +241,9 @@ fn main() {
                 .entry(x.to_path_buf())
                 .or_default()
                 .ents
-                .push(IndexEntry::with_post_and_link(
+                .push(IndexEntry::with_post_and_etc(
                     &rd,
+                    cdate,
                     if is_rel {
                         fpap.file_name().unwrap().to_str().unwrap()
                     } else {

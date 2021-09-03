@@ -27,7 +27,6 @@ pub enum PostTyp {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Post {
-    pub cdate: NaiveDate,
     pub title: String,
 
     // used for index page
@@ -64,9 +63,9 @@ pub struct IndexEntry {
 }
 
 impl IndexEntry {
-    pub fn with_post_and_link(post: &Post, lnk: &str) -> Self {
+    pub fn with_post_and_etc(post: &Post, cdate: NaiveDate, lnk: &str) -> Self {
         Self {
-            cdate: post.cdate,
+            cdate,
             href: lnk.to_string(),
             title: post.title.clone(),
             author: post.author.clone(),
