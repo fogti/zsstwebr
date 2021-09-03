@@ -211,7 +211,7 @@ fn main() {
                         std::fs::File::create(&outfilp).expect("unable to open output file");
                     let wr = std::io::BufWriter::new(fhout);
                     if let Err(x) =
-                        write_article_page(&mangler, &config, fpap.as_ref(), wr, &rd, &content)
+                        write_article_page(&mangler, &config, fpap.as_ref(), wr, &rd, content)
                     {
                         std::fs::remove_file(&outfilp)
                             .expect("unable to remove corrupted output file");

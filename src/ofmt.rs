@@ -40,7 +40,7 @@ pub fn write_article_page<W: Write>(
         write!(&mut wr, " - {}", rd.x_nav)?;
     }
     write!(&mut wr, "<br />")?;
-    let mut it = mangler.mangle_content(&content);
+    let mut it = mangler.mangle_content(content);
     if let Some((do_mangle, i)) = it.next() {
         if do_mangle {
             write!(&mut wr, "\n    ")
@@ -192,94 +192,93 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
     let now: DateTime<Utc> = Utc::now();
     let nult = chrono::NaiveTime::from_hms(0, 0, 0);
 
-    let mut feed = atom_syndication::Feed::default();
-    feed.authors = vec![{
-        let mut p = Person::default();
-        p.set_name(&config.author);
-        p
-    }];
-
-    feed.links = vec![
-        {
-            let mut l = Link::default();
-            l.href = config.id.clone();
-            l.set_rel("alternate");
-            l
-        },
-        {
-            let mut l = Link::default();
-            l.href = format!("{}/feed.atom", config.id);
-            l.set_rel("self");
-            l
-        },
-    ];
-
-    feed.title = config.blog_name.clone();
-    feed.id = config.id.clone();
-    feed.set_updated(now);
-
-    feed.entries = data
-        .ents
-        .iter()
-        .rev()
-        .take(20)
-        .map(|i| {
-            let mut e = Entry::default();
-            e.title = if crate::utils::needs_html_escape(&i.title) {
-                format!("<![CDATA[ {} ]]>", i.title)
-            } else {
-                i.title.clone()
-            };
-            e.id = i.href.clone();
-            e.links = vec![{
-                let mut l = Link::default();
-                l.href = i.href.clone();
-                l.set_rel("alternate");
-                l
-            }];
-
-            let (url, updts) = if i.href.starts_with('/') || i.href.contains("://") {
-                // absolute link, use cdate as update timestamp
-                (
-                    if i.href.starts_with('/') {
-                        format!("{}{}", config.web_root_url, i.href)
+    let feed = atom_syndication::Feed {
+        authors: vec![{
+            let mut p = Person::default();
+            p.set_name(&config.author);
+            p
+        }],
+        links: vec![
+            {
+                Link {
+                    href: config.id.clone(),
+                    rel: "alternate".to_string(),
+                    ..Default::default()
+                }
+            },
+            {
+                Link {
+                    href: format!("{}/feed.atom", config.id),
+                    rel: "self".to_string(),
+                    ..Default::default()
+                }
+            },
+        ],
+        title: config.blog_name.clone(),
+        id: config.id.clone(),
+        entries: data
+            .ents
+            .iter()
+            .rev()
+            .take(20)
+            .map(|i| {
+                let (url, updts) = if i.href.starts_with('/') || i.href.contains("://") {
+                    // absolute link, use cdate as update timestamp
+                    (
+                        if i.href.starts_with('/') {
+                            format!("{}{}", config.web_root_url, i.href)
+                        } else {
+                            i.href.clone()
+                        },
+                        DateTime::from_utc(i.cdate.and_time(nult), Utc),
+                    )
+                } else {
+                    // relative link, use mtime, or use cdate as fallback
+                    (
+                        format!("{}/{}", config.id, i.href),
+                        match std::fs::metadata(outdir.join(&i.href)) {
+                            Ok(x) => crate::utils::system_time_to_date_time(x.modified().unwrap()),
+                            Err(e) => {
+                                eprintln!(
+                                    "  warning: unable to get mtime of: {}, error = {}",
+                                    i.href, e
+                                );
+                                DateTime::from_utc(i.cdate.and_time(nult), Utc)
+                            }
+                        },
+                    )
+                };
+                Entry {
+                    title: if crate::utils::needs_html_escape(&i.title) {
+                        format!("<![CDATA[ {} ]]>", i.title)
                     } else {
-                        i.href.clone()
+                        i.title.clone()
                     },
-                    DateTime::from_utc(i.cdate.clone().and_time(nult.clone()), Utc),
-                )
-            } else {
-                // relative link, use mtime, or use cdate as fallback
-                (
-                    format!("{}/{}", config.id, i.href),
-                    match std::fs::metadata(outdir.join(&i.href)) {
-                        Ok(x) => crate::utils::system_time_to_date_time(x.modified().unwrap()),
-                        Err(e) => {
-                            eprintln!(
-                                "  warning: unable to get mtime of: {}, error = {}",
-                                i.href, e
-                            );
-                            DateTime::from_utc(i.cdate.clone().and_time(nult.clone()), Utc)
+                    id: url,
+                    links: vec![{
+                        Link {
+                            href: i.href.clone(),
+                            rel: "alternate".to_string(),
+                            ..Default::default()
                         }
-                    },
-                )
-            };
-            e.id = url;
-            e.set_updated(updts);
-
-            e.authors = i
-                .authors
-                .iter()
-                .map(|a| Person {
-                    name: a.clone(),
-                    email: None,
-                    uri: None,
-                })
-                .collect();
-
-            e
-        })
-        .collect();
+                    }],
+                    authors: i
+                        .authors
+                        .iter()
+                        .map(|a| Person {
+                            name: a.clone(),
+                            email: None,
+                            uri: None,
+                        })
+                        .collect(),
+                    updated: updts.into(),
+                    ..Default::default()
+                }
+            })
+            .collect(),
+        updated: now.into(),
+        ..Default::default()
+    };
 
     let fpath = outdir.join("feed.atom");
     let f = std::io::BufWriter::new(std::fs::File::create(fpath)?);
