@@ -7,11 +7,21 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 aho-corasick = "0.7"
-atom_syndication = "0.9"
+atom_syndication = "0.10"
+camino = "1.0"
 clap = "2.33"
-chrono = { version = "0.4", features = ["serde"] }
 readfilez = "0.2"
-serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
-walkdir = "2.3.1"
-yz-diary-date = "0.1"
+walkdir = "2.3.2"
+
+[dependencies.chrono]
+version = "0.4"
+features = ["serde"]
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
+
+[dependencies.yz-diary-date]
+version = "0.1.1"
+features = ["camino"]

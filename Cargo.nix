@@ -131,9 +131,9 @@ rec {
       };
       "atom_syndication" = rec {
         crateName = "atom_syndication";
-        version = "0.9.1";
+        version = "0.10.0";
         edition = "2018";
-        sha256 = "18m3axxsxkx8jygnnpkx2d5sygdmjvnizv7kig93wkzzaazicl1d";
+        sha256 = "1pl64bpzz21awyh8fx00fz6lpawq9ab3j1fdbchy5z24ii1mbvsm";
         authors = [
           "James Hurst <jh.jameshurst@gmail.com>"
         ];
@@ -152,17 +152,22 @@ rec {
             packageId = "diligent-date-parser";
           }
           {
+            name = "never";
+            packageId = "never";
+            optional = true;
+          }
+          {
             name = "quick-xml";
             packageId = "quick-xml";
             features = [ "encoding" ];
           }
         ];
         features = {
-          "builders" = [ "derive_builder" ];
+          "builders" = [ "derive_builder" "never" ];
           "default" = [ "builders" ];
           "with-serde" = [ "serde" "chrono/serde" ];
         };
-        resolvedDefaultFeatures = [ "builders" "default" "derive_builder" ];
+        resolvedDefaultFeatures = [ "builders" "default" "derive_builder" "never" ];
       };
       "atty" = rec {
         crateName = "atty";
@@ -215,6 +220,21 @@ rec {
           "rustc-dep-of-std" = [ "core" "compiler_builtins" ];
         };
         resolvedDefaultFeatures = [ "default" ];
+      };
+      "camino" = rec {
+        crateName = "camino";
+        version = "1.0.5";
+        edition = "2018";
+        sha256 = "0avbz0vh6l9ggf1hd6l4q3zxgw5qni0ni94a43i48sdzv5h45msj";
+        authors = [
+          "Without Boats <saoirse@without.boats>"
+          "Ashley Williams <ashley666ashley@gmail.com>"
+          "Steve Klabnik <steve@steveklabnik.com>"
+          "Rain <rain@sunshowers.io>"
+        ];
+        features = {
+          "serde1" = [ "serde" ];
+        };
       };
       "cfg-if" = rec {
         crateName = "cfg-if";
@@ -337,9 +357,9 @@ rec {
       };
       "darling" = rec {
         crateName = "darling";
-        version = "0.10.2";
+        version = "0.12.4";
         edition = "2015";
-        sha256 = "0n7qsp6854wm3y1q1lvylhv15zvc87ibbac1nyfmcdbyv1snww0d";
+        sha256 = "0g4bkxpwl6i5jav5qqzny39yd5a1fdlh5l0mj020njza6ksl6b2z";
         authors = [
           "Ted Driggs <ted.driggs@outlook.com>"
         ];
@@ -362,9 +382,9 @@ rec {
       };
       "darling_core" = rec {
         crateName = "darling_core";
-        version = "0.10.2";
+        version = "0.12.4";
         edition = "2015";
-        sha256 = "16sija1jv0l754x4aa6b6fy01d1kf8m0r4id3flqipm45np61jgh";
+        sha256 = "0dpscl87s75h6yhrmzdsapx86lc4y16m554xg4hiq2l3hrdlb4cf";
         authors = [
           "Ted Driggs <ted.driggs@outlook.com>"
         ];
@@ -387,7 +407,7 @@ rec {
           }
           {
             name = "strsim";
-            packageId = "strsim 0.9.3";
+            packageId = "strsim 0.10.0";
             optional = true;
           }
           {
@@ -403,9 +423,9 @@ rec {
       };
       "darling_macro" = rec {
         crateName = "darling_macro";
-        version = "0.10.2";
+        version = "0.12.4";
         edition = "2015";
-        sha256 = "0wlv31cxkrjijz5gv13hvk55c9lmd781aj12c8n84sa9mksa5dfr";
+        sha256 = "0nn9mxl7gs827rx5s6lbjvvghipxjdg2qpdjyxk7yym3vvqard99";
         procMacro = true;
         authors = [
           "Ted Driggs <ted.driggs@outlook.com>"
@@ -454,11 +474,32 @@ rec {
       };
       "derive_builder" = rec {
         crateName = "derive_builder";
-        version = "0.9.0";
+        version = "0.10.2";
         edition = "2015";
-        sha256 = "1h4f8vnggmpyw27fznl3cpyjrzz1nw5xrxx6ca3zcb3z54hqcrd2";
-        procMacro = true;
-        build = "build/mod.rs";
+        sha256 = "0c2v6vi0lih3fwwgwx92pspcmkrjz8wxfqwhmr01060ipvg04cni";
+        authors = [
+          "Colin Kiegel <kiegel@gmx.de>"
+          "Pascal Hertleif <killercup@gmail.com>"
+          "Jan-Erik Rediger <janerik@fnordig.de>"
+          "Ted Driggs <ted.driggs@outlook.com>"
+        ];
+        dependencies = [
+          {
+            name = "derive_builder_macro";
+            packageId = "derive_builder_macro";
+          }
+        ];
+        features = {
+          "clippy" = [ "derive_builder_macro/clippy" ];
+          "default" = [ "std" ];
+        };
+        resolvedDefaultFeatures = [ "default" "std" ];
+      };
+      "derive_builder_core" = rec {
+        crateName = "derive_builder_core";
+        version = "0.10.2";
+        edition = "2015";
+        sha256 = "1r9ngcrfcvqv5l5p86bzg9v863bjf5nlmippin1fv1v1iy2idrk6";
         authors = [
           "Colin Kiegel <kiegel@gmx.de>"
           "Pascal Hertleif <killercup@gmail.com>"
@@ -470,62 +511,48 @@ rec {
             name = "darling";
             packageId = "darling";
           }
+          {
+            name = "proc-macro2";
+            packageId = "proc-macro2";
+          }
+          {
+            name = "quote";
+            packageId = "quote";
+          }
+          {
+            name = "syn";
+            packageId = "syn";
+            features = [ "full" "extra-traits" ];
+          }
+        ];
+        features = {
+        };
+      };
+      "derive_builder_macro" = rec {
+        crateName = "derive_builder_macro";
+        version = "0.10.2";
+        edition = "2015";
+        sha256 = "0wwdm4cgd4vlvabj5xsjjr4vvkqhnd3fi9wp3v5mlb09jp74maaq";
+        procMacro = true;
+        authors = [
+          "Colin Kiegel <kiegel@gmx.de>"
+          "Pascal Hertleif <killercup@gmail.com>"
+          "Jan-Erik Rediger <janerik@fnordig.de>"
+          "Ted Driggs <ted.driggs@outlook.com>"
+        ];
+        dependencies = [
           {
             name = "derive_builder_core";
             packageId = "derive_builder_core";
           }
           {
-            name = "proc-macro2";
-            packageId = "proc-macro2";
-          }
-          {
-            name = "quote";
-            packageId = "quote";
-          }
-          {
             name = "syn";
             packageId = "syn";
             features = [ "full" "extra-traits" ];
           }
         ];
         features = {
-          "logging" = [ "log" "env_logger" "derive_builder_core/logging" ];
-          "nightlytests" = [ "compiletest_rs" ];
-          "skeptic_tests" = [ "skeptic" ];
-        };
-      };
-      "derive_builder_core" = rec {
-        crateName = "derive_builder_core";
-        version = "0.9.0";
-        edition = "2015";
-        sha256 = "1vwb8nwls4lhd2yiyj87kmwws4mmfqfrjcr0pk09b11c6wzfm497";
-        authors = [
-          "Colin Kiegel <kiegel@gmx.de>"
-          "Pascal Hertleif <killercup@gmail.com>"
-          "Jan-Erik Rediger <janerik@fnordig.de>"
-          "Ted Driggs <ted.driggs@outlook.com>"
-        ];
-        dependencies = [
-          {
-            name = "darling";
-            packageId = "darling";
-          }
-          {
-            name = "proc-macro2";
-            packageId = "proc-macro2";
-          }
-          {
-            name = "quote";
-            packageId = "quote";
-          }
-          {
-            name = "syn";
-            packageId = "syn";
-            features = [ "full" "extra-traits" ];
-          }
-        ];
-        features = {
-          "logging" = [ "log" ];
+          "clippy" = [ "derive_builder_core/clippy" ];
         };
       };
       "diligent-date-parser" = rec {
@@ -722,6 +749,19 @@ rec {
         ];
 
       };
+      "never" = rec {
+        crateName = "never";
+        version = "0.1.0";
+        edition = "2018";
+        sha256 = "149whplrasa92hdyg0bfcih2xy71d6ln6snxysrinq3pm1dblsn9";
+        authors = [
+          "Joshua Liebow-Feeser <joshlf@google.com>"
+        ];
+        features = {
+          "default" = [ "std" ];
+        };
+        resolvedDefaultFeatures = [ "default" "std" ];
+      };
       "num-integer" = rec {
         crateName = "num-integer";
         version = "0.1.44";
@@ -789,9 +829,9 @@ rec {
       };
       "quick-xml" = rec {
         crateName = "quick-xml";
-        version = "0.20.0";
+        version = "0.22.0";
         edition = "2015";
-        sha256 = "1pd6fiq79sxsf75027a65f45fqm0kds0in0y9nkf9415issbdai6";
+        sha256 = "0ssk30ymrd1724g36qjnnql225i6p31jm09cb46sval2hd6g2cw5";
         authors = [
           "Johann Tuffe <tafia973@gmail.com>"
         ];
@@ -955,21 +995,21 @@ rec {
         ];
 
       };
+      "strsim 0.10.0" = rec {
+        crateName = "strsim";
+        version = "0.10.0";
+        edition = "2015";
+        sha256 = "08s69r4rcrahwnickvi0kq49z524ci50capybln83mg6b473qivk";
+        authors = [
+          "Danny Guo <danny@dannyguo.com>"
+        ];
+
+      };
       "strsim 0.8.0" = rec {
         crateName = "strsim";
         version = "0.8.0";
         edition = "2015";
         sha256 = "0sjsm7hrvjdifz661pjxq5w4hf190hx53fra8dfvamacvff139cf";
-        authors = [
-          "Danny Guo <dannyguo91@gmail.com>"
-        ];
-
-      };
-      "strsim 0.9.3" = rec {
-        crateName = "strsim";
-        version = "0.9.3";
-        edition = "2015";
-        sha256 = "0k497pv882qn3q977ckznm13vxx927g8s1swvcv68j3c1pccwik4";
         authors = [
           "Danny Guo <dannyguo91@gmail.com>"
         ];
@@ -1245,11 +1285,17 @@ rec {
       };
       "yz-diary-date" = rec {
         crateName = "yz-diary-date";
-        version = "0.1.0";
+        version = "0.1.1";
         edition = "2018";
-        sha256 = "0r34qmk29bbl034q0jkq4psi4lzkqy77qw7vr78z2fvcfhjjpqa9";
+        sha256 = "1i8q96mx2cb8pn8fpb7p2zbjzamji7mmvn2qbswx9mc78fhycm23";
         libPath = "lib.rs";
         dependencies = [
+          {
+            name = "camino";
+            packageId = "camino";
+            optional = true;
+            usesDefaultFeatures = false;
+          }
           {
             name = "chrono";
             packageId = "chrono";
@@ -1258,6 +1304,7 @@ rec {
           }
         ];
 
+        resolvedDefaultFeatures = [ "camino" ];
       };
       "zsstwebr" = rec {
         crateName = "zsstwebr";
@@ -1278,6 +1325,10 @@ rec {
           {
             name = "atom_syndication";
             packageId = "atom_syndication";
+          }
+          {
+            name = "camino";
+            packageId = "camino";
           }
           {
             name = "chrono";
@@ -1308,6 +1359,7 @@ rec {
           {
             name = "yz-diary-date";
             packageId = "yz-diary-date";
+            features = [ "camino" ];
           }
         ];
 

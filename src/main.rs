@@ -5,7 +5,7 @@ mod utils;
 use crate::ofmt::{write_article_page, write_feed, write_index};
 use crate::utils::*;
 use std::collections::{HashMap, HashSet};
-use std::{fs::File, path::Path};
+use std::{convert::TryInto, fs::File, path::Path};
 
 fn main() {
     use clap::Arg;
@@ -149,21 +149,21 @@ fn main() {
             .expect("unable to strip path prefix")
             .with_extension("html");
         let outfilp = outdir.join(&fpap);
+        let fpap: camino::Utf8PathBuf = fpap.try_into().expect("got invalid file name");
         if let Some(x) = outfilp.parent() {
             if !crds.contains(x) {
                 std::fs::create_dir_all(x).expect("unable to create destination directory");
                 crds.insert(x.to_path_buf());
             }
         }
-        let stin = fpap.to_str().expect("got invalid file name");
-        print!("- {}", stin);
+        print!("- {}", fpap.as_str());
         let fh_data: &str = std::str::from_utf8(&*fh_data).expect("file doesn't contain UTF-8");
         let fh_data_spl = fh_data.find("\n---\n").expect("unable to get file header");
         let mut rd: Post =
             serde_yaml::from_str(&fh_data[..=fh_data_spl]).expect("unable to decode file as YAML");
         let content = &fh_data[fh_data_spl + 5..];
-        let cdate =
-            yz_diary_date::parse_from_path(&fpap).expect("file name without parsable diary date");
+        let cdate = yz_diary_date::parse_from_utf8path(&fpap)
+            .expect("file name without parsable diary date");
 
         let fparent = fpap
             .parent()
@@ -176,7 +176,7 @@ fn main() {
                     // relative URL, we need to prefix it with fparent
                     (
                         if let Some(x) = fparent {
-                            format!("{}/{}", x.to_str().unwrap(), lnk).into()
+                            format!("{}/{}", x.as_str(), lnk).into()
                         } else {
                             lnk.into()
                         },
@@ -217,13 +217,13 @@ fn main() {
                             .expect("unable to remove corrupted output file");
                         panic!(
                             "got error from write_article_page (src = {}, dst = {}): {:?}",
-                            stin,
+                            fpap.as_str(),
                             outfilp.display(),
                             x
                         );
                     }
                 }
-                (stin.into(), true)
+                (fpap.as_str().into(), true)
             }
         };
         println!();
@@ -245,7 +245,7 @@ fn main() {
                     &rd,
                     cdate,
                     if is_rel {
-                        fpap.file_name().unwrap().to_str().unwrap()
+                        fpap.file_name().unwrap()
                     } else {
                         &lnk
                     },
@@ -253,10 +253,10 @@ fn main() {
         }
     }
 
-    let mut kv: Vec<std::path::PathBuf> = subents
+    let mut kv: Vec<camino::Utf8PathBuf> = subents
         .keys()
         .flat_map(|i| i.ancestors())
-        .map(Path::to_path_buf)
+        .map(camino::Utf8Path::to_path_buf)
         .collect();
     kv.sort_unstable();
     kv.dedup();
@@ -272,7 +272,7 @@ fn main() {
         }
         .oidxrefs
         .push(IndexRef {
-            name: i.file_name().unwrap().to_str().unwrap().to_string(),
+            name: i.file_name().unwrap().to_string(),
             typ: IndexTyp::Directory,
         });
     }

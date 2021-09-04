@@ -1,3 +1,4 @@
+use atom_syndication::TextType;
 use chrono::{naive::NaiveDate, DateTime, Utc};
 use serde::Deserialize;
 use std::{path::Path, time::SystemTime};
@@ -114,6 +115,14 @@ pub fn back_to_idx(p: &Path) -> String {
 
 pub fn needs_html_escape(text: &str) -> bool {
     text.contains(|i| matches!(i, '<' | '>' | '&'))
+}
+
+pub fn guess_text_type(text: &str) -> TextType {
+    if crate::utils::needs_html_escape(text) {
+        TextType::Xhtml
+    } else {
+        TextType::Text
+    }
 }
 
 pub fn is_valid_tag(tag: &str) -> bool {

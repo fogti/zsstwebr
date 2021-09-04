@@ -1,5 +1,6 @@
-use crate::utils::back_to_idx;
+use crate::utils::{back_to_idx, guess_text_type};
 use crate::{mangle::Mangler, Config, Index, IndexTyp, Post};
+use atom_syndication::Text;
 use std::io::{Result, Write};
 use std::path::Path;
 
@@ -214,7 +215,12 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
                 }
             },
         ],
-        title: config.blog_name.clone(),
+        title: Text {
+            value: config.blog_name.clone(),
+            base: None,
+            lang: None,
+            r#type: guess_text_type(&config.blog_name),
+        },
         id: config.id.clone(),
         entries: data
             .ents
@@ -249,10 +255,11 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
                     )
                 };
                 Entry {
-                    title: if crate::utils::needs_html_escape(&i.title) {
-                        format!("<![CDATA[ {} ]]>", i.title)
-                    } else {
-                        i.title.clone()
+                    title: Text {
+                        value: i.title.clone(),
+                        base: None,
+                        lang: None,
+                        r#type: guess_text_type(&i.title),
                     },
                     id: url,
                     links: vec![{
