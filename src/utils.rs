@@ -119,7 +119,7 @@ pub fn needs_html_escape(text: &str) -> bool {
 
 pub fn guess_text_type(text: &str) -> TextType {
     if crate::utils::needs_html_escape(text) {
-        TextType::Xhtml
+        TextType::Html
     } else {
         TextType::Text
     }
