@@ -1,7 +1,7 @@
 {
   description = "a web blog renderer";
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-20.09";
+    nixpkgs.url = "github:nixos/nixpkgs/master";
     yz-flake-utils.url = "github:YZITE/flake-utils";
     # needed for default.nix, shell.nix
     flake-compat = {

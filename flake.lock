@@ -3,11 +3,11 @@
     "flake-compat": {
       "flake": false,
       "locked": {
-        "lastModified": 1606424373,
-        "narHash": "sha256-oq8d4//CJOrVj+EcOaSXvMebvuTkmBJuT5tzlfewUnQ=",
+        "lastModified": 1627913399,
+        "narHash": "sha256-hY8g6H2KFL8ownSiFeMOjwPC8P0ueXpCVEbxgda3pko=",
         "owner": "edolstra",
         "repo": "flake-compat",
-        "rev": "99f1c2157fba4bfe6211a321fd0ee43199025dbf",
+        "rev": "12c64ca55c1014cdc1b16ed5a804aa8576601ff2",
         "type": "github"
       },
       "original": {
@@ -18,16 +18,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1617146108,
-        "narHash": "sha256-Y7ThcrI5BNbXEc8KAYlqcAYAtAl9btqcFaqzLCsslkw=",
+        "lastModified": 1631696613,
+        "narHash": "sha256-6DomCcyMMRG+ShtDstRgCjC1m5J0JzjEMnUaiLnl9TY=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "fe9aef0135d6496e2b2121c37217a57af78d4e69",
+        "rev": "47eaf6727bd362dac94eab91b7fdc876642d578b",
         "type": "github"
       },
       "original": {
         "owner": "nixos",
-        "ref": "nixos-20.09",
+        "ref": "master",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -41,11 +41,11 @@
     },
     "yz-flake-utils": {
       "locked": {
-        "lastModified": 1616812917,
-        "narHash": "sha256-/4TjJDzjsTf5HNgM8dzK+m+3mU2/Y/V4rJ/WeI6yZJM=",
+        "lastModified": 1623915702,
+        "narHash": "sha256-BJA+aBQZJBeQ5t0TaoLSCL5ZG0AzH5lIgokGCb64nrk=",
         "owner": "YZITE",
         "repo": "flake-utils",
-        "rev": "a591deea197ab2d700124e2e4378e64381b555ab",
+        "rev": "b26662a1f52046434d58daf133e814cf372fc9a4",
         "type": "github"
       },
       "original": {
