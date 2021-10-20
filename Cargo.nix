@@ -583,9 +583,9 @@ rec {
       };
       "encoding_rs" = rec {
         crateName = "encoding_rs";
-        version = "0.8.28";
+        version = "0.8.29";
         edition = "2018";
-        sha256 = "0rf0r99q4kgjrx22kx7pjyjg4lm21599y3ggvy3hzj2spi7h5pw0";
+        sha256 = "0in7l50j06qmzzwk0h6bs5kdlyj5zyx9ab745lrzd60v1adahkm7";
         authors = [
           "Henri Sivonen <hsivonen@hsivonen.fi>"
         ];
@@ -596,9 +596,11 @@ rec {
           }
         ];
         features = {
+          "default" = [ "alloc" ];
           "fast-legacy-encode" = [ "fast-hangul-encode" "fast-hanja-encode" "fast-kanji-encode" "fast-gb-hanzi-encode" "fast-big5-hanzi-encode" ];
           "simd-accel" = [ "packed_simd" "packed_simd/into_bits" ];
         };
+        resolvedDefaultFeatures = [ "alloc" "default" ];
       };
       "fnv" = rec {
         crateName = "fnv";
@@ -688,9 +690,9 @@ rec {
       };
       "libc" = rec {
         crateName = "libc";
-        version = "0.2.101";
+        version = "0.2.104";
         edition = "2015";
-        sha256 = "08dsmvn397ph8gnj552k12gmpp2rk6p60jyliqnfvr8vhwv07c1w";
+        sha256 = "1knzxi1fk75yfz6zqf160yc55awh7gdpx6viwwlikkz1038rcbvv";
         authors = [
           "The Rust Project Developers"
         ];
@@ -809,9 +811,9 @@ rec {
       };
       "proc-macro2" = rec {
         crateName = "proc-macro2";
-        version = "1.0.29";
+        version = "1.0.30";
         edition = "2018";
-        sha256 = "0gfj25ksq90ifcssfnwv46v856sxd885wmm9bhrj1ays9xfi1xdr";
+        sha256 = "0w7fc5mvk7jsfgn1pmiphkvjd0min12zj1y0l1zqpg37pj73bhzd";
         authors = [
           "Alex Crichton <alex@alexcrichton.com>"
           "David Tolnay <dtolnay@gmail.com>"
@@ -854,9 +856,9 @@ rec {
       };
       "quote" = rec {
         crateName = "quote";
-        version = "1.0.9";
+        version = "1.0.10";
         edition = "2018";
-        sha256 = "19rjmfqzk26rxbgxy5j2ckqc2v12sw2xw8l4gi8bzpn2bmsbkl63";
+        sha256 = "01ff7a76f871ggnby57iagw6499vci4bihcr11g6bqzjlp38rg1q";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -969,9 +971,9 @@ rec {
       };
       "serde_yaml" = rec {
         crateName = "serde_yaml";
-        version = "0.8.20";
+        version = "0.8.21";
         edition = "2018";
-        sha256 = "029wbx4dj2p2vvqzwc65ykrx28i69j1hw0dk1srxln69yd0lc45d";
+        sha256 = "1br0kf7qkpq6jgj37s7q46wk9zs7fqa07r7vr76x7985ayihiinq";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -1017,9 +1019,9 @@ rec {
       };
       "syn" = rec {
         crateName = "syn";
-        version = "1.0.76";
+        version = "1.0.80";
         edition = "2018";
-        sha256 = "110vb9zy9fvijppwpalz5qh9g4g6y0m4vgrd4iaj0b1c83dhgwf6";
+        sha256 = "156i2pkz6rqic3zgfgq5wjhgy1gwmrm93aahsr8nv45x7xia246h";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -1100,9 +1102,9 @@ rec {
       };
       "unicode-width" = rec {
         crateName = "unicode-width";
-        version = "0.1.8";
+        version = "0.1.9";
         edition = "2015";
-        sha256 = "1qxizyi6xbcqyi4z79p523ywvmgsfcgfqb3zv3c8i6x1jcc5jdwk";
+        sha256 = "0wq9wl69wlp6zwlxp660g9p4hm5gk91chwk14dp1gl9bxba45mry";
         authors = [
           "kwantam <kwantam@gmail.com>"
           "Manish Goregaokar <manishsmail@gmail.com>"
@@ -1333,6 +1335,7 @@ rec {
           {
             name = "chrono";
             packageId = "chrono";
+            usesDefaultFeatures = false;
             features = [ "serde" ];
           }
           {

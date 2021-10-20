@@ -16,6 +16,12 @@ walkdir = "2.3.2"
 
 [dependencies.chrono]
 version = "0.4"
+# we really don't want the clock feature, it's broken.
+# see also: https://github.com/chronotope/chrono/issues/499
+# this doesn't completely solve it, however,
+# atom_syndication also needs a bump
+# see also: https://github.com/rust-syndication/atom/issues/56
+default-features = false
 features = ["serde"]
 
 [dependencies.serde]
