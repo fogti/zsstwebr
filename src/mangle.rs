@@ -31,8 +31,10 @@ impl<'a, 'i> Iterator for MangleIter<'a, 'i> {
                 None => {
                     let section = self.input.next()?;
                     let do_mangle = !self.ahos.is_match(section);
-                    let section = section.lines();
-                    self.state = Some(SectionState { do_mangle, section });
+                    self.state = Some(SectionState {
+                        do_mangle,
+                        section: section.lines(),
+                    });
                     if do_mangle {
                         break Some((true, "<p>"));
                     }
@@ -41,13 +43,11 @@ impl<'a, 'i> Iterator for MangleIter<'a, 'i> {
                     do_mangle,
                     mut section,
                 }) => {
-                    let (state, ret) = match section.next() {
-                        None => (None, if do_mangle { Some("</p>") } else { None }),
-                        x => (Some(SectionState { do_mangle, section }), x),
-                    };
-                    self.state = state;
-                    if let Some(x) = ret {
+                    if let Some(x) = section.next() {
+                        self.state = Some(SectionState { do_mangle, section });
                         break Some((do_mangle, x));
+                    } else if do_mangle {
+                        break Some((true, "</p>"));
                     }
                 }
             }
