@@ -7,27 +7,26 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 aho-corasick = "0.7"
-atom_syndication = "0.10"
+atom_syndication = "0.11"
 camino = "1.0"
 clap = "2.33"
 readfilez = "0.2"
 serde_yaml = "0.8"
-walkdir = "2.3.2"
+walkdir = "2.3"
 
 [dependencies.chrono]
 version = "0.4"
-# we really don't want the clock feature, it's broken.
-# see also: https://github.com/chronotope/chrono/issues/499
-# this doesn't completely solve it, however,
-# atom_syndication also needs a bump
-# see also: https://github.com/rust-syndication/atom/issues/56
+# sadly, we use Utc::now(), so we can't mitigate
+# https://github.com/chronotope/chrono/issues/499
+# but the program isn't multithreaded, so it
+# shouldn't be a problem...
 default-features = false
-features = ["serde"]
+features = ["clock", "serde"]
 
 [dependencies.serde]
 version = "1.0"
 features = ["derive"]
 
 [dependencies.yz-diary-date]
-version = "0.1.1"
+version = "0.1"
 features = ["camino"]

@@ -131,9 +131,9 @@ rec {
       };
       "atom_syndication" = rec {
         crateName = "atom_syndication";
-        version = "0.10.0";
+        version = "0.11.0";
         edition = "2018";
-        sha256 = "1pl64bpzz21awyh8fx00fz6lpawq9ab3j1fdbchy5z24ii1mbvsm";
+        sha256 = "0hbmmlvll9hjxrrirbjdb91445y5adz17y26zvd7wlf6745nmyr1";
         authors = [
           "James Hurst <jh.jameshurst@gmail.com>"
         ];
@@ -141,6 +141,8 @@ rec {
           {
             name = "chrono";
             packageId = "chrono";
+            usesDefaultFeatures = false;
+            features = [ "alloc" ];
           }
           {
             name = "derive_builder";
@@ -280,11 +282,6 @@ rec {
             usesDefaultFeatures = false;
           }
           {
-            name = "time";
-            packageId = "time";
-            optional = true;
-          }
-          {
             name = "winapi";
             packageId = "winapi";
             optional = true;
@@ -299,7 +296,7 @@ rec {
           "unstable-locales" = [ "pure-rust-locales" "alloc" ];
           "wasmbind" = [ "wasm-bindgen" "js-sys" ];
         };
-        resolvedDefaultFeatures = [ "alloc" "clock" "default" "libc" "oldtime" "serde" "std" "time" "winapi" ];
+        resolvedDefaultFeatures = [ "alloc" "clock" "libc" "serde" "std" "winapi" ];
       };
       "clap" = rec {
         crateName = "clap";
@@ -557,9 +554,9 @@ rec {
       };
       "diligent-date-parser" = rec {
         crateName = "diligent-date-parser";
-        version = "0.1.2";
+        version = "0.1.3";
         edition = "2018";
-        sha256 = "113dxlw97d3zpjfxs95zvy7vz668wsl0dk8vyyhzr2qvy0laazp3";
+        sha256 = "0817g67b11z0cmj1kimqwkfrpzvg8ql5cv4cb1n2sbn0qyazvl62";
         authors = [
           "Andrey Kutejko <andy128k@gmail.com>"
         ];
@@ -567,6 +564,7 @@ rec {
           {
             name = "chrono";
             packageId = "chrono";
+            usesDefaultFeatures = false;
           }
         ];
 
@@ -690,9 +688,9 @@ rec {
       };
       "libc" = rec {
         crateName = "libc";
-        version = "0.2.104";
+        version = "0.2.106";
         edition = "2015";
-        sha256 = "1knzxi1fk75yfz6zqf160yc55awh7gdpx6viwwlikkz1038rcbvv";
+        sha256 = "0wynaqs2ix4fqk603qhi7axw1fg9p5rhbcp9nhrs6fg0m7wm61d6";
         authors = [
           "The Rust Project Developers"
         ];
@@ -811,12 +809,12 @@ rec {
       };
       "proc-macro2" = rec {
         crateName = "proc-macro2";
-        version = "1.0.30";
+        version = "1.0.32";
         edition = "2018";
-        sha256 = "0w7fc5mvk7jsfgn1pmiphkvjd0min12zj1y0l1zqpg37pj73bhzd";
+        sha256 = "0hqbxlvhiaybakl1gai3mgps1dxsmxricxsr2rfdrh222z0qql5s";
         authors = [
-          "Alex Crichton <alex@alexcrichton.com>"
           "David Tolnay <dtolnay@gmail.com>"
+          "Alex Crichton <alex@alexcrichton.com>"
         ];
         dependencies = [
           {
@@ -1019,9 +1017,9 @@ rec {
       };
       "syn" = rec {
         crateName = "syn";
-        version = "1.0.80";
+        version = "1.0.81";
         edition = "2018";
-        sha256 = "156i2pkz6rqic3zgfgq5wjhgy1gwmrm93aahsr8nv45x7xia246h";
+        sha256 = "0rh9hvwy75j3krmi4d4x76xb86f753hxr8mlxjbabddyp0cfxbzj";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -1062,40 +1060,6 @@ rec {
           {
             name = "unicode-width";
             packageId = "unicode-width";
-          }
-        ];
-
-      };
-      "time" = rec {
-        crateName = "time";
-        version = "0.1.44";
-        edition = "2015";
-        sha256 = "0m9jwy2pcmk232r3b9r80fs12mkckfjffjha4qfaxcdq9a8ydfbd";
-        authors = [
-          "The Rust Project Developers"
-        ];
-        dependencies = [
-          {
-            name = "libc";
-            packageId = "libc";
-          }
-          {
-            name = "wasi";
-            packageId = "wasi";
-            target = { target, features }: (target."os" == "wasi");
-          }
-          {
-            name = "winapi";
-            packageId = "winapi";
-            target = { target, features }: (target."windows" or false);
-            features = [ "std" "minwinbase" "minwindef" "ntdef" "profileapi" "sysinfoapi" "timezoneapi" ];
-          }
-        ];
-        devDependencies = [
-          {
-            name = "winapi";
-            packageId = "winapi";
-            features = [ "std" "processthreadsapi" "winbase" ];
           }
         ];
 
@@ -1192,20 +1156,6 @@ rec {
         ];
 
       };
-      "wasi" = rec {
-        crateName = "wasi";
-        version = "0.10.0+wasi-snapshot-preview1";
-        edition = "2018";
-        sha256 = "07y3l8mzfzzz4cj09c8y90yak4hpsi9g7pllyzpr6xvwrabka50s";
-        authors = [
-          "The Cranelift Project Developers"
-        ];
-        features = {
-          "default" = [ "std" ];
-          "rustc-dep-of-std" = [ "compiler_builtins" "core" "rustc-std-workspace-alloc" ];
-        };
-        resolvedDefaultFeatures = [ "default" "std" ];
-      };
       "winapi" = rec {
         crateName = "winapi";
         version = "0.3.9";
@@ -1229,7 +1179,7 @@ rec {
         features = {
           "debug" = [ "impl-debug" ];
         };
-        resolvedDefaultFeatures = [ "consoleapi" "errhandlingapi" "fileapi" "minwinbase" "minwindef" "ntdef" "processenv" "profileapi" "std" "sysinfoapi" "timezoneapi" "winbase" "wincon" "winerror" "winnt" ];
+        resolvedDefaultFeatures = [ "consoleapi" "errhandlingapi" "fileapi" "minwinbase" "minwindef" "processenv" "std" "timezoneapi" "winbase" "wincon" "winerror" "winnt" ];
       };
       "winapi-i686-pc-windows-gnu" = rec {
         crateName = "winapi-i686-pc-windows-gnu";
@@ -1336,7 +1286,7 @@ rec {
             name = "chrono";
             packageId = "chrono";
             usesDefaultFeatures = false;
-            features = [ "serde" ];
+            features = [ "clock" "serde" ];
           }
           {
             name = "clap";
