@@ -1,13 +1,12 @@
-mod mangle;
 mod ofmt;
 mod utils;
 
-use crate::ofmt::{write_article_page, write_feed, write_index};
-use crate::utils::*;
 use std::collections::{HashMap, HashSet};
 use std::{convert::TryInto, fs::File, path::Path};
 
 fn main() {
+    use crate::ofmt::{write_article_page, write_feed, write_index};
+    use crate::utils::*;
     use clap::Arg;
 
     let null_path = Path::new("");
@@ -45,7 +44,7 @@ fn main() {
         )
         .get_matches();
 
-    let mangler = mangle::Mangler::new(&[
+    let mangler = Mangler::new(&[
         "address",
         "article",
         "aside",

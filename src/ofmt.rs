@@ -1,5 +1,4 @@
-use crate::utils::{back_to_idx, guess_text_type};
-use crate::{mangle::Mangler, Config, Index, IndexTyp, Post};
+use crate::utils::{back_to_idx, guess_text_type, Config, Index, IndexTyp, Mangler, Post};
 use atom_syndication::Text;
 use std::io::{Result, Write};
 use std::path::Path;
