@@ -1,0 +1,7 @@
+blog_name: 'Hello World Blog!'
+author: 'arth'
+id: 'https://very.cool.website/blog'
+stylesheet: '/style.css'
+x_head: ''
+x_body_ph1: ' <!-- impress.html stuff -->'
+x_nav: ' <a href="/imprint.html">Impressum</a>'

@@ -1,0 +1,9 @@
+title: 'Hello World!'
+tags: []
+typ: text
+---
+This is a simple test post.
+
+<ul>
+  <li>you can embed HTML, hopefully it doesn't get mangled (don't include newlines in it)</li>
+</ul>
