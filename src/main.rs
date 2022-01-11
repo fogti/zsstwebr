@@ -12,33 +12,33 @@ fn main() {
     let null_path = Path::new("");
 
     let matches = clap::App::new("zsstwebr")
-        .version(clap::crate_version!())
+        .version(env!("CARGO_PKG_VERSION"))
         .author("Erik Zscheile <erik.zscheile@gmail.com>")
         .about("a blog post renderer")
         .arg(
-            Arg::with_name("INPUT_DIR")
+            Arg::new("INPUT_DIR")
                 .help("sets the input directory")
                 .required(true)
                 .index(1),
         )
         .arg(
-            Arg::with_name("output_dir")
-                .short("o")
+            Arg::new("output_dir")
+                .short('o')
                 .long("output-dir")
                 .takes_value(true)
                 .required(true)
                 .help("sets the output directory"),
         )
         .arg(
-            Arg::with_name("config")
+            Arg::new("config")
                 .long("config")
                 .takes_value(true)
                 .required(true)
                 .help("sets the config file path"),
         )
         .arg(
-            Arg::with_name("force-rebuild")
-                .short("f")
+            Arg::new("force-rebuild")
+                .short('f')
                 .long("force-rebuild")
                 .help("force overwriting of destination files even if the source files weren't modified")
         )
@@ -111,7 +111,7 @@ fn main() {
     for dirent in walkdir::WalkDir::new(indir)
         .into_iter()
         // skip directories like .git
-        .filter_entry(|e| is_not_hidden(e))
+        .filter_entry(is_not_hidden)
     {
         let dirent = match dirent {
             Ok(x) => x,
