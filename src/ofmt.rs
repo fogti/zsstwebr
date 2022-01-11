@@ -201,7 +201,7 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
         links: vec![
             {
                 Link {
-                    href: config.id.clone(),
+                    href: config.id.as_str().to_string(),
                     rel: "alternate".to_string(),
                     ..Default::default()
                 }
@@ -220,7 +220,7 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
             lang: None,
             r#type: guess_text_type(&config.blog_name),
         },
-        id: config.id.clone(),
+        id: config.id.as_str().to_string(),
         entries: data
             .ents
             .iter()
@@ -231,7 +231,9 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
                     // absolute link, use cdate as update timestamp
                     (
                         if i.href.starts_with('/') {
-                            format!("{}{}", config.web_root_url, i.href)
+                            let mut tmp = config.id.clone();
+                            tmp.set_path(&i.href);
+                            tmp.into()
                         } else {
                             i.href.clone()
                         },
