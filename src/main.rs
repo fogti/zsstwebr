@@ -11,7 +11,7 @@ fn main() {
 
     let null_path = Path::new("");
 
-    let matches = clap::App::new("zsstwebr")
+    let matches = clap::Command::new("zsstwebr")
         .version(env!("CARGO_PKG_VERSION"))
         .author("Erik Zscheile <erik.zscheile@gmail.com>")
         .about("a blog post renderer")
@@ -40,7 +40,9 @@ fn main() {
             Arg::new("force-rebuild")
                 .short('f')
                 .long("force-rebuild")
-                .help("force overwriting of destination files even if the source files weren't modified")
+                .help(
+                "force overwriting of destination files even if the source files weren't modified",
+            ),
         )
         .get_matches();
 
@@ -244,7 +246,7 @@ fn main() {
                     &rd,
                     cdate,
                     if is_rel {
-                        fpap.file_name().unwrap()
+                        camino::Utf8Path::new(&*lnk).file_name().unwrap()
                     } else {
                         &lnk
                     },

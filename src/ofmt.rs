@@ -144,7 +144,9 @@ pub fn write_index(
             refline += " - ";
             refline_len += 3;
         }
-        refline += &format!(
+        use std::fmt::Write;
+        write!(
+            &mut refline,
             "<a href=\"{}{}.html\">{}</a>",
             i.name.replace('&', "&amp;"),
             if i.typ == IndexTyp::Directory {
@@ -153,7 +155,8 @@ pub fn write_index(
                 ""
             },
             i.name
-        );
+        )
+        .unwrap();
         refline_len += il;
     }
     if !refline.is_empty() {
