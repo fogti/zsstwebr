@@ -150,7 +150,7 @@ pub fn system_time_to_date_time(t: SystemTime) -> DateTime<Utc> {
         }
     };
     use chrono::TimeZone;
-    Utc.timestamp(sec, nsec)
+    Utc.timestamp_opt(sec, nsec).unwrap()
 }
 
 /// blog content mangler (inserts paragraph tags)

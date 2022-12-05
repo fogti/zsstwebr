@@ -88,9 +88,15 @@ fn main() {
             .expect("unable to get config file stat()")
             .modified()
             .ok();
-        let fh_data =
-            readfilez::read_part_from_file(&mut fh, 0, readfilez::LengthSpec::new(None, true))
-                .expect("unable to read config file");
+        let fh_data = readfilez::read_part_from_file(
+            &mut fh,
+            0,
+            readfilez::LengthSpec {
+                bound: None,
+                is_exact: true,
+            },
+        )
+        .expect("unable to read config file");
         (
             serde_yaml::from_slice(&*fh_data).expect("unable to decode file as YAML"),
             config_mtime,

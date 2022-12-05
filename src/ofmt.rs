@@ -193,7 +193,7 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
     println!("- atom feed");
 
     let now: DateTime<Utc> = Utc::now();
-    let nult = chrono::NaiveTime::from_hms(0, 0, 0);
+    let nult = chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
 
     let feed = atom_syndication::Feed {
         authors: vec![{
