@@ -2,22 +2,27 @@ mod ofmt;
 mod utils;
 
 use std::collections::{HashMap, HashSet};
-use std::{convert::TryInto, fs::File, path::Path};
+use std::{
+    convert::TryInto,
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 fn main() {
     use crate::ofmt::{write_article_page, write_feed, write_index};
     use crate::utils::*;
-    use clap::Arg;
+    use clap::{Arg, ArgAction};
 
     let null_path = Path::new("");
 
     let matches = clap::Command::new("zsstwebr")
         .version(env!("CARGO_PKG_VERSION"))
-        .author("Erik Zscheile <erik.zscheile@gmail.com>")
+        .author("Alain Zscheile <zseri.devel@ytrizja.de>")
         .about("a blog post renderer")
         .arg(
             Arg::new("INPUT_DIR")
                 .help("sets the input directory")
+                .action(ArgAction::Set)
                 .required(true)
                 .index(1),
         )
@@ -25,24 +30,25 @@ fn main() {
             Arg::new("output_dir")
                 .short('o')
                 .long("output-dir")
-                .takes_value(true)
-                .required(true)
-                .help("sets the output directory"),
+                .help("sets the output directory")
+                .action(ArgAction::Set)
+                .num_args(1)
+                .required(true),
         )
         .arg(
             Arg::new("config")
                 .long("config")
-                .takes_value(true)
-                .required(true)
-                .help("sets the config file path"),
+                .help("sets the config file path")
+                .action(ArgAction::Set)
+                .num_args(1)
+                .required(true),
         )
         .arg(
             Arg::new("force-rebuild")
                 .short('f')
                 .long("force-rebuild")
-                .help(
-                "force overwriting of destination files even if the source files weren't modified",
-            ),
+                .help("force overwriting of destination files even if the source files weren't modified")
+                .action(ArgAction::SetTrue),
         )
         .get_matches();
 
@@ -76,13 +82,13 @@ fn main() {
         "ul",
     ]);
 
-    let indir = matches.value_of("INPUT_DIR").unwrap();
-    let outdir = matches.value_of("output_dir").unwrap();
+    let indir: &PathBuf = matches.get_one("INPUT_DIR").unwrap();
+    let outdir: &PathBuf = matches.get_one("output_dir").unwrap();
     std::fs::create_dir_all(&outdir).expect("unable to create output directory");
 
     let (config, config_mtime): (Config, Option<_>) = {
-        let mut fh =
-            File::open(matches.value_of("config").unwrap()).expect("unable to open config file");
+        let mut fh = File::open(matches.get_one::<&PathBuf>("config").unwrap())
+            .expect("unable to open config file");
         let config_mtime = fh
             .metadata()
             .expect("unable to get config file stat()")
@@ -111,7 +117,7 @@ fn main() {
     let mut tagents = HashMap::<_, Vec<_>>::new();
     let mut subents = HashMap::<_, Index>::new();
 
-    let force_rebuild = matches.is_present("force-rebuild");
+    let force_rebuild = matches.get_flag("force-rebuild");
     let mut crds = HashSet::new();
     let indir = Path::new(indir);
     let outdir = Path::new(outdir);
