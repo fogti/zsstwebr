@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::{
     convert::TryInto,
     fs::File,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 fn main() {
@@ -87,7 +87,7 @@ fn main() {
     std::fs::create_dir_all(&outdir).expect("unable to create output directory");
 
     let (config, config_mtime): (Config, Option<_>) = {
-        let mut fh = File::open(matches.get_one::<&PathBuf>("config").unwrap())
+        let mut fh = File::open(matches.get_one::<String>("config").unwrap())
             .expect("unable to open config file");
         let config_mtime = fh
             .metadata()
