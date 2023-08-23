@@ -7,7 +7,7 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 aho-corasick = "0.7"
-atom_syndication = "0.11"
+atom_syndication = "0.12"
 camino = "1.1"
 clap = "4.0"
 readfilez = "0.3"
