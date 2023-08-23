@@ -82,8 +82,8 @@ fn main() {
         "ul",
     ]);
 
-    let indir: &PathBuf = matches.get_one("INPUT_DIR").unwrap();
-    let outdir: &PathBuf = matches.get_one("output_dir").unwrap();
+    let indir: &String = matches.get_one("INPUT_DIR").unwrap();
+    let outdir: &String = matches.get_one("output_dir").unwrap();
     std::fs::create_dir_all(&outdir).expect("unable to create output directory");
 
     let (config, config_mtime): (Config, Option<_>) = {
