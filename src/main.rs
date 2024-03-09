@@ -2,11 +2,7 @@ mod ofmt;
 mod utils;
 
 use std::collections::{HashMap, HashSet};
-use std::{
-    convert::TryInto,
-    fs::File,
-    path::Path,
-};
+use std::{convert::TryInto, fs::File, path::Path};
 
 fn main() {
     use crate::ofmt::{write_article_page, write_feed, write_index};

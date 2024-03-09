@@ -1,4 +1,4 @@
-use aho_corasick::AhoCorasick;
+use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use atom_syndication::TextType;
 use chrono::{naive::NaiveDate, DateTime, Utc};
 use serde::Deserialize;
@@ -214,7 +214,9 @@ impl Mangler {
             .flat_map(|&i| diiter("<".to_string() + i + ">", "</".to_string() + i + ">"))
             .collect();
         Mangler {
-            ahos: AhoCorasick::new_auto_configured(&pats),
+            ahos: AhoCorasickBuilder::new()
+                .build(&pats)
+                .expect("unable to build mangle filter"),
         }
     }
 
