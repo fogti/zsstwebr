@@ -187,7 +187,7 @@ pub fn write_index(
 
 pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Result<()> {
     use atom_syndication::{Entry, Link, Person};
-    use chrono::{DateTime, Utc};
+    use chrono::{DateTime, TimeZone, Utc};
 
     assert_eq!(data.typ, IndexTyp::Directory);
     println!("- atom feed");
@@ -240,7 +240,7 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
                         } else {
                             i.href.clone()
                         },
-                        DateTime::from_utc(i.cdate.and_time(nult), Utc),
+                        TimeZone::from_utc_datetime(&Utc, &i.cdate.and_time(nult)),
                     )
                 } else {
                     // relative link, use mtime, or use cdate as fallback
@@ -253,7 +253,7 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
                                     "  warning: unable to get mtime of: {}, error = {}",
                                     i.href, e
                                 );
-                                DateTime::from_utc(i.cdate.and_time(nult), Utc)
+                                TimeZone::from_utc_datetime(&Utc, &i.cdate.and_time(nult))
                             }
                         },
                     )
