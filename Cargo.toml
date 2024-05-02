@@ -27,10 +27,6 @@ features = ["clock", "serde"]
 version = "1.0"
 features = ["derive"]
 
-[dependencies.url]
-version = "2.5"
-features = ["serde"]
-
 [dependencies.yz-diary-date]
 version = "0.1"
 features = ["camino"]

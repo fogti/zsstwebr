@@ -223,7 +223,7 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
             lang: None,
             r#type: guess_text_type(&config.blog_name),
         },
-        id: config.id.as_str().to_string(),
+        id: config.id.to_string(),
         entries: data
             .ents
             .iter()
@@ -233,13 +233,7 @@ pub fn write_feed(config: &Config, outdir: &Path, data: &Index) -> std::io::Resu
                 let (url, updts) = if i.href.starts_with('/') || i.href.contains("://") {
                     // absolute link, use cdate as update timestamp
                     (
-                        if i.href.starts_with('/') {
-                            let mut tmp = config.id.clone();
-                            tmp.set_path(&i.href);
-                            tmp.into()
-                        } else {
-                            i.href.clone()
-                        },
+                        i.href.clone(),
                         TimeZone::from_utc_datetime(&Utc, &i.cdate.and_time(nult)),
                     )
                 } else {

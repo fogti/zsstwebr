@@ -8,7 +8,7 @@ use walkdir::DirEntry;
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     pub blog_name: String,
-    pub id: url::Url,
+    pub id: String,
     pub author: String,
     pub stylesheet: String,
     #[serde(default)]
